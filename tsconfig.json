@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "es5",
+      "es6",
+      "dom",
+      "dom.iterable"
+    ],
+    "outDir": "dist/",
+    "sourceMap": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "target": "es6",
+    "declaration": true,
+    "removeComments": false,
+    "noImplicitAny": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "pretty": true,
+    "esModuleInterop": true
+  },
+  "include": [
+    "src/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test"
+  ]
+}

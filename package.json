@@ -1,0 +1,103 @@
+{
+  "name": "iconz",
+  "version": "0.1.0",
+  "description": "Icon Generator for the Web",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "license": "MIT",
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "npm run type-check -- --watch",
+    "build": "npm run build:types && npm run build:js",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:js": "babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
+    "clean": "rimraf dist",
+    "test": "npm run lint && npm run cover",
+    "test:prod": "cross-env BABEL_ENV=production npm run test",
+    "test:only": "mocha --require ts-node/register --require @babel/register --require @babel/polyfill --recursive test/**/*.spec.ts",
+    "test:watch": "npm test -- --watch",
+    "test:examples": "node examples/",
+    "cover": "nyc --check-coverage npm run test:only",
+    "lint": "eslint src/index.ts",
+    "prepublish": "npm run clean && npm run lint && npm run test && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suaveplan/iconz.git"
+  },
+  "homepage": "https://github.com/SuavePlan/iconz#readme",
+  "bugs": {
+    "url": "https://github.com/SuavePlan/iconz/issues"
+  },
+  "keywords": [
+    "icon",
+    "icons",
+    "icns",
+    "ico",
+    "generator",
+    "module"
+  ],
+  "author": "SuavePlan <email@suaveplan.com>",
+  "dependencies": {
+    "@fiahfy/icns": "^0.0.7",
+    "@types/sharp": "^0.28.4",
+    "ico-to-png": "^0.2.1",
+    "png-to-ico": "^2.1.2",
+    "rimraf": "^3.0.2",
+    "sharp": "^0.28.3"
+  },
+  "engine": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.14.5",
+    "@babel/core": "^7.14.6",
+    "@babel/eslint-parser": "^7.14.7",
+    "@babel/node": "^7.14.7",
+    "@babel/plugin-proposal-class-properties": "^7.14.5",
+    "@babel/plugin-transform-modules-commonjs": "^7.14.5",
+    "@babel/plugin-transform-typescript": "^7.14.6",
+    "@babel/polyfill": "^7.12.1",
+    "@babel/preset-env": "^7.14.7",
+    "@babel/preset-react": "^7.14.5",
+    "@babel/preset-typescript": "^7.14.5",
+    "@babel/register": "^7.14.5",
+    "@types/chai": "^4.2.21",
+    "@types/mocha": "^8.2.3",
+    "@types/node": "^16.3.3",
+    "@types/pngjs": "^6.0.1",
+    "@types/rewire": "^2.5.28",
+    "@types/rimraf": "^3.0.1",
+    "@types/sinon": "^10.0.2",
+    "@types/sinon-chai": "^3.2.5",
+    "@typescript-eslint/eslint-plugin": "^4.28.3",
+    "@typescript-eslint/parser": "^4.28.3",
+    "babel-plugin-add-module-exports": "^1.0.4",
+    "babel-plugin-transform-remove-console": "^6.9.4",
+    "babel-preset-minify": "^0.5.1",
+    "chai": "^4.3.4",
+    "chai-arrays": "^2.2.0",
+    "chai-as-promised": "^7.1.1",
+    "chai-deep-match": "^1.2.1",
+    "chai-match": "^1.1.1",
+    "cross-env": "^7.0.3",
+    "eslint": "^7.31.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.23.4",
+    "eslint-plugin-jsdoc": "^35.4.5",
+    "eslint-plugin-markdown": "^2.2.0",
+    "eslint-plugin-mocha": "^9.0.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "eslint-plugin-promise": "^5.1.0",
+    "mocha": "^9.0.2",
+    "nyc": "^15.1.0",
+    "prettier": "^2.3.2",
+    "sinon": "^11.1.1",
+    "sinon-chai": "^3.7.0",
+    "ts-node": "^10.1.0",
+    "typescript": "^4.3.5"
+  }
+}
