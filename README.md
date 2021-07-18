@@ -276,8 +276,8 @@ const defaultConfig: IconzConfigCollection = {
       density: 150,
     },
     resize: <IconzResizeOptions>{
-      fit: 'cover',
-      background: {r: 0, g: 0, b: 0, alpha: 0},
+      fit: 'contain',
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
       kernel: 'mitchell',
       position: 'centre',
       withoutEnlargement: false,
@@ -318,7 +318,7 @@ const defaultConfig: IconzConfigCollection = {
       sizes: [16, 24, 32, 48, 64],
       folder: '.',
     },
-    faviconpng: {
+    faviconPng: {
       type: 'png',
       name: 'favicon',
       sizes: [32],
@@ -336,7 +336,7 @@ const defaultConfig: IconzConfigCollection = {
       sizes: [70, 144, 150, 270, 310, '310x150'],
       folder: 'icons',
       options: {
-        background: {r: 0, g: 0, b: 0, alpha: 1},
+        background: { r: 0, g: 0, b: 0, alpha: 1 },
       },
     },
     android: {
