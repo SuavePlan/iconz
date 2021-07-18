@@ -3,18 +3,19 @@
 Convert a single image (.jpg, .png, .webp, .avif, .gif, .svg, .tiff) or icon (.ico) into various sized png, ico and icns
 files automatically.
 
-* [Installation](#Installation)
-* [How to Use](#How to Use)
-  * [Minimal Setup](#Minimal Setup)
-  * [Custom Sizes](#Custom Sizes)
-  * [Using Actions](#Using Actions)
-  * [Advanced](#Advanced)
-* [Configuration Layout](#Configuration Layout)
-  * [Default Configuration](#Default Configuration)
-* [Icon Configuration](#Icon Configuration)
-  * [Hooks](#Hooks)
-* [Output Filename parsing](#Output Filename parsing)
-  * [Filename examples](#Filename examples)
+* [Installation](#installation)
+* [How to Use](#how-to-use)
+  * [Minimal Setup](#minimal-setup)
+  * [Custom Sizes](#custom-sizes)
+  * [Using Actions](#using-actions)
+  * [Advanced](#advanced)
+* [Configuration Layout](#configuration-layout)
+  * [Default Configuration](#default-configuration)
+* [Icon Configuration](#icon-configuration)
+  * [Hooks](#how-to-use)
+* [Output Filename parsing](#output-filename-parsing)
+  * [Filename examples](#filename-examples)
+  
 # Installation
 
 Node Package Manager (NPM)
