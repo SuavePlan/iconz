@@ -85,11 +85,14 @@ Output Options:
     /** create target folder */
     if (keys.includes('f') && !(await fs.existsSync(argv.f))) {
       fs.mkdirSync(argv.f, { recursive: true });
+      /** update folder */
+      folder = argv.f;
     }
 
     /** starter configuration */
     const config = {
       src: argv.i,
+      folder,
       resize: {},
     };
 

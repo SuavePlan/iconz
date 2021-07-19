@@ -1316,15 +1316,7 @@ class Iconz {
           }
 
           /**  output directory */
-          let outputDir: string;
-
-          if (config.folder) {
-            outputDir = this.isRelativePath(config.folder)
-              ? this.path().join(this._config.folder, config.folder)
-              : config.folder;
-          } else {
-            outputDir = this.absoluteFolderPath(this._config.folder);
-          }
+          const outputDir = this.absoluteFolderPath(config.folder || this._config.folder);
 
           /**  get all successfully generated images */
           const availableFiles = Object.keys(report.tmp);
