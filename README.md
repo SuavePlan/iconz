@@ -32,13 +32,13 @@ Yarn
 ## Command Line
 
 ```shell
-iconz --help    - Gives help on how to use command
-iconz -i my-image.png                                 Generates default icon set in same folder as input file
-iconz -i my-image.png -t ./icons                      Generates all the default icons, also keeps the temporary pngs in icons folder 
-                                                        (relative to my image.jpg) formatted WxH.png (e.g 32x32.png)
-iconz -i my-image.png --ico=favicon                   Generates an ico file called favicon.ico using the default sizes
-iconz -i my-image.png --icns=app                      Generates an icns icon file called app.icns using the default sizes                                          
-iconz -i my-image.png --icns=jpeg,32,64 -f ./thumbs   Generates thumbnail icons 32x32.jpg and 64x64.jpg inside 'thumbs' folder                                           
+iconz --help                                              Gives help on how to use command
+iconz -i my-image.png                                     Generates default icon set in same folder as input file
+iconz -i my-image.png -t ./icons                          Generates all the default icons, also keeps the temporary pngs in icons folder 
+                                                            (relative to my image.jpg) formatted WxH.png (e.g 32x32.png)
+iconz -i my-image.png --ico=favicon                       Generates an ico file called favicon.ico using the default sizes
+iconz -i my-image.png --icns=app                          Generates an icns icon file called app.icns using the default sizes                                          
+iconz -i my-image.png -f ./thumbs --jpeg={{dims}},32,64   Generates thumbnail icons 32x32.jpg and 64x64.jpg inside 'thumbs' folder                                           
 ```
 
 ## Minimal NodeJS Setup
