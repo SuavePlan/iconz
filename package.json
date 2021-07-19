@@ -1,12 +1,17 @@
 {
   "name": "iconz",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Icon Generator for the Web",
   "main": "dist/index.js",
+  "bin": {
+    "iconz": "bin/iconz.js"
+  },
   "typings": "dist/index.d.ts",
   "license": "MIT",
   "files": [
-    "dist/"
+    "dist/",
+    "bin/iconz.js",
+    "README.md"
   ],
   "scripts": {
     "type-check": "tsc --noEmit",
@@ -20,6 +25,7 @@
     "test:only": "mocha --require ts-node/register --require @babel/register --require @babel/polyfill --recursive test/**/*.spec.ts",
     "test:watch": "npm test -- --watch",
     "test:examples": "node examples/",
+    "test:cmd": "npm run test --",
     "cover": "nyc --check-coverage npm run test:only",
     "lint": "eslint src/index.ts",
     "prepublish": "npm run clean && npm run lint && npm run test && npm run build"
@@ -33,18 +39,21 @@
     "url": "https://github.com/SuavePlan/iconz/issues"
   },
   "keywords": [
-    "icon",
-    "icons",
+    "cli",
+    "generator",
     "icns",
     "ico",
-    "generator",
-    "module"
+    "icon",
+    "icons",
+    "module",
+    "thumbnail"
   ],
   "author": "SuavePlan <email@suaveplan.com>",
   "dependencies": {
     "@fiahfy/icns": "^0.0.7",
     "@types/sharp": "^0.28.4",
     "ico-to-png": "^0.2.1",
+    "minimist": "^1.2.5",
     "png-to-ico": "^2.1.2",
     "rimraf": "^3.0.2",
     "sharp": "^0.28.3"
@@ -66,6 +75,7 @@
     "@babel/preset-typescript": "^7.14.5",
     "@babel/register": "^7.14.5",
     "@types/chai": "^4.2.21",
+    "@types/minimist": "^1.2.2",
     "@types/mocha": "^8.2.3",
     "@types/node": "^16.3.3",
     "@types/pngjs": "^6.0.1",

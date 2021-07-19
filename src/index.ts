@@ -310,6 +310,13 @@ export interface IconzConfig {
   enabled?: boolean;
 }
 
+export const defaultSizes: Record<string, (string | number)[]> = {
+  ico: [16, 24, 32, 48, 64, 128, 256],
+  icns: [16, 32, 64, 128, 256, 512, 1024],
+  png: [16, 32, 64, 128, 256, 512, 1024],
+  jpeg: [16, 32, 64, 128, 256, 512, 1024],
+};
+
 /**
  * This is the default icon configuration
  */
@@ -705,7 +712,7 @@ class Iconz {
    * @param {string} hex - input hex string
    * @returns {IconzColour} - Colour object
    */
-  bgHexToObj(hex: string): IconzColour {
+  static bgHexToObj(hex: string): IconzColour {
     if (!/^#?([0-9A-F]{6}|[0-9A-F]{8})/i.test(hex)) {
       throw new Error('Invalid hex, should be #AAFF00 (rgb) or #AAFF0022 (rgba) format');
     }
@@ -731,12 +738,23 @@ class Iconz {
   }
 
   /**
+   * Convert hex string into colour object
+   *
+   * @param {string} hex - input hex string
+   * @returns {IconzColour} - Colour object
+   */
+
+  bgHexToObj(hex: string): IconzColour {
+    return Iconz.bgHexToObj(hex);
+  }
+
+  /**
    * Convert colour object into hex string
    *
    * @param {IconzColour} obj - Colour object to convert
    * @returns {string} - Hex string in the format #RRGGBBAA
    */
-  bgObjToHex(obj: IconzColour): string {
+  static bgObjToHex(obj: IconzColour): string {
     if (
       typeof obj !== 'object' ||
       typeof obj.r !== 'number' ||
@@ -756,6 +774,16 @@ class Iconz {
         .toString(16)
         .padStart(2, '0')
     ).toUpperCase();
+  }
+
+  /**
+   * Convert colour object into hex string
+   *
+   * @param {IconzColour} obj - Colour object to convert
+   * @returns {string} - Hex string in the format #RRGGBBAA
+   */
+  bgObjToHex(obj: IconzColour): string {
+    return Iconz.bgObjToHex(obj);
   }
 
   /**
@@ -993,6 +1021,11 @@ class Iconz {
             /**  skip if the config has been disabled */
             if (config.enabled === false) {
               continue;
+            }
+
+            /** if there are no sizes, try and use defaults */
+            if (config.sizes.length === 0 && Array.isArray(defaultSizes[config.type])) {
+              config.sizes = [...defaultSizes[config.type]];
             }
 
             /** if there are multiple sizes, and it's a static image, it must have a dynamic field */

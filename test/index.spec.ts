@@ -66,7 +66,7 @@ describe('Iconz', () => {
     it('icons config as string', () => {
       assert.throws(() => {
         // @ts-ignore
-        const test = new Iconz({ src: validImagePath, icons: 'string' });
+        new Iconz({ src: validImagePath, icons: 'string' });
       }, 'Icon configuration is invalid');
     });
 
@@ -646,7 +646,6 @@ describe('Iconz', () => {
       const result = iconz.parseTemplate('{{test.this}}', { test: { this: undefined } }, true);
       assert.equal(result, '', 'value missing');
     });
-
   });
 
   describe('getParserValues()', () => {
@@ -732,6 +731,21 @@ describe('Iconz', () => {
       const result = await iconz.run().catch((e) => e.message);
 
       assert.deepStrictEqual(result, Iconz.newReport(), 'should return empty results');
+    });
+
+    it('generateIcons no sizes, uses defaults.', async () => {
+      const iconz = new Iconz({
+        src: validImagePath,
+        icons: { test: { enabled: true, type: 'ico', name: 'test', sizes: [] } },
+      });
+
+      const result = await iconz.run().catch((e) => e.message);
+
+      assert.equal(typeof result, 'object', 'should return object');
+      assert.equal(typeof result.ico, 'object', 'should return object');
+      assert.equal(Object.values(result.ico).length, 1, 'should return one icon result');
+      /** remove test file */
+      fs.unlinkSync(result.ico.test);
     });
 
     it('generateIcons multi sized without unique name field', async () => {
@@ -1060,9 +1074,6 @@ describe('Iconz', () => {
               preResize: (
                 self: Iconz,
                 image: IconzImage,
-                options: IconzResizeOptions,
-                targetFilename: string,
-                imageReport: IconzReport,
               ): Promise<IconzImage> => Promise.resolve(image),
               postResize: (
                 self: Iconz,
