@@ -93,7 +93,9 @@ Output Options:
     const config = {
       src: argv.i,
       folder,
-      resize: {},
+      options: {
+        resize: {},
+      },
     };
 
     /** add temp folder if specified */
@@ -134,18 +136,18 @@ Output Options:
 
     /** if no enlargement has been chosen */
     if (keys.includes('no-enlargement')) {
-      config.resize.withoutEnlargement = true;
+      config.options.resize.withoutEnlargement = true;
     }
 
     /** if no enlargement has been chosen */
     if (keys.includes('no-fast-shrink')) {
-      config.resize.fastShrinkOnLoad = false;
+      config.options.resize.fastShrinkOnLoad = false;
     }
 
     /** change background colour */
     if (keys.includes('bg')) {
       if (/^([0-9A-F]{6}|[0-9A-F]{8})/i.test(argv.bg)) {
-        config.background = Iconz.bgHexToObj(argv.bg);
+        config.options.resize.background = Iconz.bgHexToObj(argv.bg);
       }
     }
 
