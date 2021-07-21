@@ -1,5 +1,5 @@
 import path from 'path';
-import fs from 'fs';
+import { writeFile, readFile, mkdir, copyFile, stat, rename, readdir, rmdir, unlink } from 'fs/promises';
 import os from 'os';
 import sharp from 'sharp';
 import crypto from 'crypto';
@@ -8,7 +8,7 @@ import icoToPng from 'ico-to-png';
 import rimraf from 'rimraf';
 import { Icns, IcnsImage } from '@fiahfy/icns';
 import { OSType } from '@fiahfy/icns/dist';
-import Buffer from 'buffer';
+import { readFileSync, statSync } from 'fs';
 
 /** direct references to sharp library */
 export type IconzInputOptions = sharp.SharpOptions;
@@ -26,7 +26,7 @@ export type IconzType = typeof IconzTypes[number];
 
 export interface IconzReport {
   /** temporary images */
-  tmp: Record<string, IconzResizeOptions | string>;
+  temp: Record<string, IconzResizeOptions | string>;
   /** ico images */
   ico: any;
   /** icns images */
@@ -87,22 +87,28 @@ export interface IconzConfigCollection {
    * This is the image you wish to use as a template
    *
    */
-  src?: string;
+  input?: string;
 
   /**
-   * This is the base folder for all generated icons
-   *
-   * If left blank, it will use the directory of your
-   * source image
+   * This is the temporary holding variable for Buffer
    *
    */
-  folder?: string;
+  buffer?: Buffer;
+
+  /**
+   * This is the base output for all generated icons
+   *
+   * If left blank, it will use the directory of your
+   * input image
+   *
+   */
+  output?: string;
 
   /**
    * This is where the temporary png images are generated
    *
-   * if left blank, it will generate a temporary folder
-   * inside your operating system's temp folder.
+   * if left blank, it will generate a temporary output
+   * inside your operating system's temp output.
    *
    * If you enter a directory, it will generate the icons
    * within that directory, and it will remain until you
@@ -112,7 +118,7 @@ export interface IconzConfigCollection {
    * e.g: 16x16.png , 32x32.png .... 1024x1024.png
    *
    */
-  tmpFolder?: string;
+  temp?: string;
 
   /**
    * These options are based upon the sharp library parameter 'options'
@@ -160,7 +166,7 @@ export interface IconzConfigCollection {
  * ```javascript
  * const myHook = (self,image,options,targetFilename,imageReport) => {
  *  image.blur(4).jpeg().toBuffer()
- *    .then((data) => fs.writeFileSync('myFile.jpg', data));
+ *    .then((data) => await writeFile('myFile.jpg', data));
  *  Promise.resolve(undefined); // halt processing of the image any further
  * }
  * ```
@@ -264,7 +270,7 @@ export interface IconzConfig {
    * This is the folder you wish to store the images
    * generated from this configuration.
    *
-   * If left blank, it will use the default folder
+   * If left blank, it will use the default output
    * from the main configuration.
    *
    */
@@ -417,6 +423,13 @@ class Iconz {
   protected _config: IconzConfigCollection = {};
 
   /**
+   * If buffer is supplied as input, move here.
+   *
+   * @protected
+   */
+  protected _buffer?: Buffer;
+
+  /**
    * these are the variables which can be used when parsing the filename
    */
   protected _parserValues: Record<string, any> = {};
@@ -430,13 +443,22 @@ class Iconz {
     if (typeof config !== 'object') {
       throw new Error('config is missing');
     }
+
+    /** store buffer separately */
+    if (Buffer.isBuffer(config.buffer)) {
+      this._buffer = config.buffer;
+      delete config.buffer;
+    }
+
     this._config = this.mergeConfig(this.clone(defaultConfig), config);
 
     /** if icons have been chosen, overwrite defaults */
     if (typeof config.icons === 'object') {
       this._config.icons = this.clone(config.icons);
     }
-    this.validateConfig(this._config);
+
+    /** validate config */
+    this.validateConfig();
   }
 
   /**
@@ -540,32 +562,32 @@ class Iconz {
    * Merge Configurations
    *
    * @param {Record<any, any>} target - Target Object
-   * @param {Record<any, any>} sources - Source Object
+   * @param {Record<any, any>} inputs - input Object
    * @returns {Record<any, any>} - merged object
    */
-  mergeConfig(target: Record<any, any>, ...sources: Record<any, any>[]): Record<any, any> {
+  mergeConfig(target: Record<any, any>, ...inputs: Record<any, any>[]): Record<any, any> {
     const isObject = (item: any) => {
       return item && typeof item === 'object' && !Array.isArray(item);
     };
 
-    if (!sources.length) return target;
-    const source = sources.shift();
+    if (!inputs.length) return target;
+    const input = inputs.shift();
 
-    if (isObject(target) && isObject(source)) {
-      for (const key in source) {
-        if (isObject(source[key])) {
-          /**  ensure that if the source object is intentionally empty, set the target as empty too. */
-          if (!target[key] || Object.keys(source[key]).length === 0) Object.assign(target, { [key]: {} });
-          this.mergeConfig(target[key], source[key]);
-        } else if (Array.isArray(source[key]) && Array.isArray(target[key])) {
-          target[key] = [...new Set([...target[key], ...source[key]])];
+    if (isObject(target) && isObject(input)) {
+      for (const key in input) {
+        if (isObject(input[key])) {
+          /**  ensure that if the input object is intentionally empty, set the target as empty too. */
+          if (!target[key] || Object.keys(input[key]).length === 0) Object.assign(target, { [key]: {} });
+          this.mergeConfig(target[key], input[key]);
+        } else if (Array.isArray(input[key]) && Array.isArray(target[key])) {
+          target[key] = [...new Set([...target[key], ...input[key]])];
         } else {
-          Object.assign(target, { [key]: source[key] });
+          Object.assign(target, { [key]: input[key] });
         }
       }
     }
 
-    return this.mergeConfig(target, ...sources);
+    return this.mergeConfig(target, ...inputs);
   }
 
   /**
@@ -573,53 +595,45 @@ class Iconz {
    *
    * @param {IconzConfigCollection} config - main configuration object
    */
-  validateConfig(config: IconzConfigCollection): void {
-    if (typeof config !== 'object' || config === null) {
+  validateConfig(config?: IconzConfigCollection): void {
+    if (typeof config !== 'object' && typeof config !== 'undefined') {
       throw new TypeError('Invalid configuration');
     }
 
-    /**  try to read image file */
-    if (typeof config.src !== 'string' || !fs.existsSync(config.src)) {
-      throw new Error('Source image not found');
+    /** use stored config if not specified */
+    config ??= this._config;
+
+    /** check if input is file */
+    if (typeof this._buffer === 'undefined' && (typeof config.input !== 'string' || !statSync(config.input).isFile())) {
+      throw new Error('input image not found');
     }
 
-    /**  create base folder if it doesn't exist */
-    if (typeof config.folder === 'string') {
-      if (!fs.existsSync(config.folder)) {
-        try {
-          fs.mkdirSync(config.folder, { recursive: true });
-        } catch {
-          /**  folder wasn't created */
-          throw new Error(`Unable to create folder ${config.folder}`);
-        }
-      }
-    } else if (typeof config.folder === 'undefined') {
-      /**  set base output folder same as input folder */
-      config.folder = this.path().dirname(config.src);
-    } else {
-      throw new Error('Invalid folder name');
+    /** try to open image file */
+    if (typeof this._buffer === 'undefined' && !readFileSync(config.input)) {
+      throw new Error('input image is unreadable');
     }
 
-    if (typeof config.tmpFolder !== 'undefined') {
-      if (typeof config.tmpFolder !== 'string') {
-        throw new Error('Invalid temp folder');
-      }
-
-      if (!this.isAbsolutePath(config.tmpFolder) && !this.isRelativePath(config.tmpFolder)) {
-        throw new Error('Invalid temp folder name');
-      }
-    } else {
-      config.tmpFolder = fs.mkdtempSync(this.path().join(os.tmpdir(), 'iconz-'));
+    if (typeof config.output === 'undefined' && typeof config.input !== 'undefined') {
+      /**  set output folder as input folder */
+      config.output = this.fullPath(this.path().dirname(config.input));
+    } else if (typeof config.output !== 'string') {
+      throw new Error('Invalid output name');
     }
 
-    /**  if temp folder is selected, ensure it exists. This will be used to store all sized png files */
-    if (!fs.existsSync(config.tmpFolder)) {
-      try {
-        fs.mkdirSync(
-          this.isRelativePath(config.tmpFolder) ? this.path().join(config.folder, config.tmpFolder) : config.tmpFolder,
-          { recursive: true },
-        );
-      } catch {}
+    /** if a buffer has been supplied as input (from stdin) make filename placeholder */
+    if (typeof this._buffer !== 'undefined' && typeof config.input === 'undefined') {
+      const filename = 'buffer';
+
+      /** make name for file */
+      config.input = <string>(
+        (this.isAbsolutePath(config.output) ? config : this.path().join(process.cwd(), config.output, filename))
+      );
+    }
+
+    if (typeof config.temp === 'undefined') {
+      config.temp = this.path().join(os.tmpdir(), `Iconz-${crypto.randomBytes(4).toString('hex')}`);
+    } else if (typeof config.temp !== 'string') {
+      throw new Error('Invalid temp output name');
     }
 
     if (typeof config.icons !== 'undefined' && typeof config.icons !== 'object') {
@@ -639,16 +653,6 @@ class Iconz {
    */
   isAbsolutePath(str: string): boolean {
     return this.path().isAbsolute(str);
-  }
-
-  /**
-   * Check if path is relative
-   *
-   * @param {string} str - path to check
-   * @returns {boolean} - if path is relative
-   */
-  isRelativePath(str: string): boolean {
-    return !this.isAbsolutePath(str);
   }
 
   /**
@@ -687,7 +691,7 @@ class Iconz {
   }
 
   /**
-   * Add action for source image
+   * Add action for input image
    *
    * @see https://sharp.pixelplumbing.com/api-operation for all operations
    * @param {IconzImageActionName} cmd - The command to be run
@@ -792,7 +796,7 @@ class Iconz {
    * @param {string|number} size - input size as single or two dimensions
    * @returns {number[]} - returns an array containing with and height
    */
-  generateWidthAndHeightFromSize(size: string | number): number[] {
+  static generateWidthAndHeightFromSize(size: string | number): number[] {
     /**  convert single dimension into width x height */
 
     if (Number.isInteger(size) || (typeof size === 'string' && /^[0-9]+$/.test(size))) {
@@ -823,7 +827,7 @@ class Iconz {
     delete tempOptions.hooks;
     delete tempOptions.name;
 
-    /** change hashes to ensure changed images are saved in separate hashed folders */
+    /** change hashes to ensure changed images are saved in separate hashed outputs */
     if (typeof options.hooks === 'object') {
       if (options.hooks.postResize) {
         tempOptions.postResize = options.name;
@@ -840,7 +844,7 @@ class Iconz {
   }
 
   /**
-   * create a hash to be used as folder name based upon data
+   * create a hash to be used as output name based upon data
    *
    * @param {string} data - the data string to be hashed
    * @param {number} len - length of hash (in bytes)
@@ -910,20 +914,47 @@ class Iconz {
   /**
    * prepare absolute path
    *
-   * @param {string} folder - input path
+   * @param {string} output - input path
+   * @param {string} prefix - add optional prefix path
+   * @param {boolean} addImageinputPath - add image input path, defaults to true
    * @returns {string} - resulting absolute path
    */
-  absoluteFolderPath(folder: string): string {
-    const parts: string[] = [];
+  fullPath(output?: string, prefix?: string, addImageinputPath?: boolean): string {
+    /** prefix with image input path if output is relative */
+    addImageinputPath ??= true;
 
-    if (this.isRelativePath(folder)) {
-      if (this.isRelativePath(this._config.folder)) {
-        parts.push(process.cwd());
-      }
-      parts.push(this._config.folder);
+    /** if output is missing, use current directory */
+    output ??= '.';
+
+    /** if output is absolute, nothing needs to be processed */
+    if (this.isAbsolutePath(output)) {
+      return output;
     }
 
-    parts.push(folder);
+    const parts: string[] = [];
+
+    /**
+     *
+     *  if prefix isn't specified or is a relative path,
+     *  prefix with cwd and optional image dir
+     */
+    if (typeof prefix !== 'string' || !this.isAbsolutePath(prefix)) {
+      const imageinputPath = this.path().dirname(this._config.input);
+
+      if (addImageinputPath) {
+        if (!this.isAbsolutePath(imageinputPath)) {
+          parts.push(process.cwd());
+        }
+        parts.push(imageinputPath);
+      }
+    }
+    /** add prefix */
+    if (typeof prefix === 'string') {
+      parts.push(prefix);
+    }
+
+    /** add output to the end */
+    parts.push(output);
 
     return this.path().resolve(this.path().join(...parts));
   }
@@ -957,6 +988,40 @@ class Iconz {
   }
 
   /**
+   * Make a directory if it doesn't already exist
+   *
+   * @param {string} directory - directory name
+   * @returns {Promise<boolean>} - if the directory exists, or has been created successfully
+   */
+  static async makeDirectory(directory: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      (async () => {
+        try {
+          if (typeof directory !== 'string') {
+            throw new Error('directory not valid');
+          }
+
+          /** get stats for directory */
+          const stats = await stat(directory)
+            .then((s) => s)
+            .catch(() => undefined);
+
+          /**  make directory for icon if it doesn't exist */
+          if (!stats || !stats.isDirectory()) {
+            if (undefined === (await mkdir(directory, { recursive: true }))) {
+              throw new Error('Directory does not exist');
+            }
+          }
+
+          resolve(true);
+        } catch (error) {
+          resolve(false);
+        }
+      })();
+    });
+  }
+
+  /**
    * Prepare all images ready for icons
    *
    * @returns {Promise<IconzReport>} - Iconz Report
@@ -965,12 +1030,14 @@ class Iconz {
     return new Promise((resolve, reject) => {
       (async () => {
         try {
-          /**  read source image */
+          /**  read input image */
           let img = sharp(
             /** if it's an icon, use icoToPng to convert into a buffer before passing to sharp */
-            this.path().extname(this._config.src) === '.ico'
-              ? await icoToPng(fs.readFileSync(this._config.src), 1024)
-              : this._config.src,
+            this._buffer
+              ? this._buffer
+              : this.path().extname(this._config.input) === '.ico'
+              ? await icoToPng(await readFile(this._config.input), 1024)
+              : this._config.input,
             await this.getInputOptions(),
           );
 
@@ -986,24 +1053,20 @@ class Iconz {
               const action: IconzImageAction = this._config.actions[key];
               // eslint-disable-next-line @typescript-eslint/ban-ts-comment
               // @ts-ignore
-              img = img[action.cmd](...action.args);
+              img = img[action.cmd](...(action.args || []));
             }
           }
 
-          /**  create temporary folder if needed */
-          const tempFolder = this.absoluteFolderPath(
-            this._config.tmpFolder || fs.mkdtempSync(this.path().join(os.tmpdir(), 'iconz-')),
-          );
+          /** attempt to use temp from config, else create one in OS temp output */
+          const tempPath =
+            this._config.temp || this.path().join(os.tmpdir(), `Iconz-${crypto.randomBytes(4).toString('hex')}`);
+
+          /**  create temporary output if needed */
+          const tempFolder = this.fullPath(tempPath, undefined, tempPath.indexOf(os.tmpdir()) !== 0);
 
           /**  instantiate report */
-          const imageReport: IconzReport = {
-            tmp: {},
-            ico: {},
-            icns: {},
-            png: {},
-            jpeg: {},
-            failed: {},
-          };
+
+          const imageReport: IconzReport = Iconz.newReport();
 
           const outputOptions = await this.getOutputOptions();
 
@@ -1049,11 +1112,12 @@ class Iconz {
               }
 
               /**  if image hasn't been created before, generate it. */
-              if (typeof imageReport.tmp[response.target] === 'undefined') {
-                /**  create folder first */
+              if (typeof imageReport.temp[response.target] === 'undefined') {
+                /**  create output first */
                 const dirname = this.path().dirname(response.target);
-                if (!fs.existsSync(dirname)) {
-                  fs.mkdirSync(dirname);
+
+                if (!(await Iconz.makeDirectory(dirname))) {
+                  throw new Error(`Unable to create directory : ${dirname}`);
                 }
 
                 /**  clone the image */
@@ -1075,15 +1139,14 @@ class Iconz {
                 /**  convert to buffer, then output */
                 await clone
                   .toBuffer()
-                  .then((data: Buffer.Buffer) => {
-                    fs.writeFileSync(response.target, data);
+                  .then((buffer) => writeFile(response.target, buffer))
+                  .then(() => {
                     /**  store image path with settings to report */
-                    imageReport.tmp[response.target] = response.options;
+                    imageReport.temp[response.target] = response.options;
                     return response.target;
                   })
-                  .catch((err) => {
-                    /**  write error to report */
-                    imageReport.failed[response.target] = err.message || 'unknown error';
+                  .catch((error) => {
+                    imageReport.failed[response.target] = error || 'unknown error';
                   });
               }
             }
@@ -1098,7 +1161,7 @@ class Iconz {
   }
 
   /**
-   * convert configuration into options and target folder name for temp folder
+   * convert configuration into options and target output name for temp output
    *
    * @param {IconzConfig} config - Configuration Object
    * @param {string} basePath - base path
@@ -1120,7 +1183,7 @@ class Iconz {
     /**  loop through images and prepare png files */
     for (const size of config.sizes) {
       /**  get dimensions */
-      const [width, height] = this.generateWidthAndHeightFromSize(size);
+      const [width, height] = Iconz.generateWidthAndHeightFromSize(size);
 
       /**  generate settings for image resize */
       const options: IconzResizeOptions = {
@@ -1194,13 +1257,90 @@ class Iconz {
    */
   static newReport(): IconzReport {
     return {
-      tmp: {},
+      temp: {},
       ico: {},
       icns: {},
       png: {},
       jpeg: {},
       failed: {},
     };
+  }
+
+  async removeFile(file: string, removeFolder?: boolean): Promise<boolean> {
+    removeFolder ??= false;
+
+    return new Promise((resolve) => {
+      (async () => {
+        try {
+          if (!this.isAbsolutePath(file)) {
+            throw new Error(`invalid absolute path ${file}`);
+          }
+
+          const stats = await stat(file)
+            .then((s) => s)
+            .catch(() => undefined);
+
+          if (stats && stats.isFile(file)) {
+            /** attempt to remove file */
+            await unlink(file);
+
+            /** attempt to remove parent output (if empty) */
+            const dirname = this.path().dirname(file);
+
+            if (
+              removeFolder &&
+              (await readdir(dirname)
+                .then((files) => {
+                  return files.length === 0;
+                })
+                .catch(() => undefined))
+            ) {
+              /** remove parent directory */
+              await rmdir(dirname).catch(() => undefined);
+            }
+          }
+
+          resolve(true);
+        } catch (error) {
+          resolve(false);
+        }
+      })();
+    });
+  }
+
+  async removeAllGeneratedImages(report: IconzReport, removeParentDirectory?: boolean): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      (async () => {
+        try {
+          for (const type of Object.keys(report)) {
+            if (['failed', 'temp'].includes(type)) {
+              /** remove all temp and failed files */
+              for (const file of Object.keys(report[type])) {
+                await this.removeFile(file, removeParentDirectory);
+              }
+            } else if (['png', 'jpeg', 'icns', 'ico'].includes(type)) {
+              for (const name in report[type]) {
+                /** loop through image results */
+                for (const file of report[type][name]) {
+                  await this.removeFile(file, removeParentDirectory);
+                }
+              }
+            } else {
+              /** loop through any custom results */
+              for (const file of Object.keys(report[type])) {
+                if (typeof file === 'string') {
+                  await this.removeFile(file, removeParentDirectory);
+                }
+              }
+            }
+          }
+
+          resolve(true);
+        } catch (error) {
+          reject(error.message);
+        }
+      })();
+    });
   }
 
   /**
@@ -1246,6 +1386,7 @@ class Iconz {
         );
       }
     }
+
     return output;
   }
 
@@ -1273,12 +1414,12 @@ class Iconz {
 
     /**  loop through sizes and prepare dimensional output */
     for (const size of sizes) {
-      const tmp =
+      const temp =
         typeof size === 'number' || (typeof size === 'string' && size.indexOf('x') === -1)
           ? [String(size), String(size)]
           : size.split('x');
-      const width = Number(tmp[0]);
-      const height = Number(tmp[1]);
+      const width = Number(temp[0]);
+      const height = Number(temp[1]);
       if (width * height > px) {
         px = width * height;
         dims = {
@@ -1316,10 +1457,13 @@ class Iconz {
           }
 
           /**  output directory */
-          const outputDir = this.absoluteFolderPath(config.folder || this._config.folder);
+          const outputDir = this.fullPath(
+            config.folder || this._config.output,
+            this.isAbsolutePath(this._config.input) ? this.path().dirname(this._config.input) : undefined,
+          );
 
           /**  get all successfully generated images */
-          const availableFiles = Object.keys(report.tmp);
+          const availableFiles = Object.keys(report.temp);
 
           let chosenFiles: string[] = [];
 
@@ -1371,13 +1515,15 @@ class Iconz {
             const newFilename = this.path().join(outputDir, `${name}.ico`);
 
             /** convert png to ico */
-            return resolve(
-              pngToIco(chosenFiles).then((buf: Buffer) => {
-                fs.mkdirSync(this.path().dirname(newFilename), { recursive: true });
-                fs.writeFileSync(newFilename, buf);
-                return newFilename;
-              }),
-            );
+            const buffer = await pngToIco(chosenFiles);
+
+            if (buffer) {
+              if (!(await Iconz.makeDirectory(this.path().dirname(outputDir)))) {
+                throw new Error(`Unable to make directory ${outputDir}`);
+              }
+              await writeFile(newFilename, buffer);
+              return resolve(newFilename);
+            }
           }
 
           throw new Error('Unable to create ico');
@@ -1415,10 +1561,11 @@ class Iconz {
             const icns = new Icns();
             let buf, image;
 
+            /** Append selected images to IcnsImage */
             for (const [osType, size] of Object.entries(conversionMap)) {
               for (const file of chosenFiles) {
                 if (this.path().basename(file, '.png') === size) {
-                  buf = fs.readFileSync(file);
+                  buf = await readFile(file);
                   image = IcnsImage.fromPNG(buf, <OSType>osType);
                   icns.append(image);
                 }
@@ -1434,11 +1581,15 @@ class Iconz {
             /** parse filename */
             const name = this.parseTemplate(config.name, parserValues);
 
+            if (name === undefined) {
+              throw new Error(`Unable to parse template ${config.name}`);
+            }
+
             /**  create new filename */
             const newFilename = this.path().join(outputDir, `${name}.icns`);
 
-            fs.mkdirSync(this.path().dirname(newFilename), { recursive: true });
-            fs.writeFileSync(newFilename, icns.data);
+            await Iconz.makeDirectory(outputDir);
+            await writeFile(newFilename, icns.data);
 
             return resolve(newFilename);
           }
@@ -1482,10 +1633,12 @@ class Iconz {
             /**  create new filename */
             const newFilename = this.path().join(outputDir, `${name}.png`);
             /**  make directory for icon */
-            fs.mkdirSync(this.path().dirname(newFilename), { recursive: true });
+            await Iconz.makeDirectory(outputDir);
             /**  copy icon from temporary images */
-            fs.copyFileSync(file, newFilename);
-            outputFiles.push(newFilename);
+            try {
+              await copyFile(file, newFilename);
+              outputFiles.push(newFilename);
+            } catch {}
           }
 
           resolve(outputFiles);
@@ -1527,8 +1680,11 @@ class Iconz {
 
             /**  create new filename */
             const newFilename = this.path().join(outputDir, `${name}.jpg`);
-            /**  make directory for icon */
-            fs.mkdirSync(this.path().dirname(newFilename), { recursive: true });
+
+            if (!(await Iconz.makeDirectory(outputDir))) {
+              throw new Error(`Unable to create directory - ${outputDir}`);
+            }
+
             /** generate jpeg image */
             await sharp(file)
               .toFormat('jpeg', (await this.getOutputOptions()).formats.jpeg)
@@ -1554,6 +1710,9 @@ class Iconz {
   async generateIcons(report: IconzReport): Promise<IconzReport> {
     return new Promise((resolve, reject) => {
       (async () => {
+        /** duplicate report */
+        const outputReport = this.clone(report);
+
         /**  reference to icons configurations */
         const icons = this._config.icons;
 
@@ -1565,22 +1724,27 @@ class Iconz {
               continue;
             }
 
+            /**  */
             switch (icons[key].type) {
               case 'jpeg':
-                report.jpeg[key] = await this.jpegGenerator(icons[key], report);
+                outputReport.jpeg[key] ??= [];
+                outputReport.jpeg[key].push(...(await this.jpegGenerator(icons[key], outputReport)));
                 break;
               case 'png':
-                report.png[key] = await this.pngGenerator(icons[key], report);
+                outputReport.png[key] ??= [];
+                outputReport.png[key].push(...(await this.pngGenerator(icons[key], outputReport)));
                 break;
               case 'ico':
-                report.ico[key] = await this.icoGenerator(icons[key], report);
+                outputReport.ico[key] ??= [];
+                outputReport.ico[key].push(await this.icoGenerator(icons[key], outputReport));
                 break;
               case 'icns':
-                report.icns[key] = await this.icnsGenerator(icons[key], report);
+                outputReport.icns[key] ??= [];
+                outputReport.icns[key].push(await this.icnsGenerator(icons[key], outputReport));
                 break;
             }
           }
-          resolve(report);
+          resolve(outputReport);
         } catch (error) {
           reject(error);
         }
@@ -1589,7 +1753,7 @@ class Iconz {
   }
 
   /**
-   * Remove temporary folders which were generated to separate same sized images but different config options
+   * Remove temporary outputs which were generated to separate same sized images but different config options
    *
    * @param {IconzReport} report - Iconz Report
    * @returns {Promise<IconzReport>} - Iconz Report
@@ -1599,23 +1763,39 @@ class Iconz {
       (async () => {
         const directories = [];
 
-        for (const file in report.tmp) {
+        /** create cloned report */
+        const outputReport = this.clone(report);
+
+        for (const file in report.temp) {
           try {
-            const fileDir = this.path().dirname(file);
-            const dir = this.path().dirname(fileDir);
-            let newFile = this.path().join(dir, this.path().basename(file));
+            const filename = this.path().basename(file);
+            const fileDirectory = this.path().dirname(file);
+            const fileDirectoryShort = this.path().basename(fileDirectory);
+            const parentDirectory = this.path().dirname(fileDirectory);
+            let newFile = this.path().join(parentDirectory, filename);
+
+            const stats = await stat(newFile)
+              .then((s) => s)
+              .catch(() => undefined);
+
             try {
               /** if there is a duplicate named file, just prefix with previous hash */
-              if (fs.existsSync(newFile)) {
-                newFile = this.path().join(dir, this.path().basename(fileDir) + '_' + this.path().basename(file));
+              if (stats && stats.isFile()) {
+                newFile = this.path().join(parentDirectory, fileDirectoryShort + '_' + filename);
               }
-              fs.renameSync(file, newFile);
 
-              delete report.tmp[file];
-              report.tmp[newFile] = 'complete';
+              /** rename the file */
+              await rename(file, newFile);
+
+              /** remove old filename from report */
+              delete outputReport.temp[file];
+
+              /** add new filename to report */
+              outputReport.temp[newFile] = 'complete';
             } catch {}
 
-            directories.push(fileDir);
+            /** push the file directory in to queue for deletion after completion */
+            directories.push(fileDirectory);
           } catch {}
         }
 
@@ -1626,7 +1806,8 @@ class Iconz {
           } catch {}
         }
 
-        resolve(report);
+        /** promise resolve the new modified report */
+        resolve(outputReport);
       })();
     });
   }
@@ -1640,9 +1821,19 @@ class Iconz {
     return new Promise((resolve, reject) => {
       (async () => {
         try {
-          const report = await this.prepareAllSizedImages();
-          await this.generateIcons(report);
-          await this.removeTemporaryFolders(report);
+          /** run to double check configuration before icon generation */
+          this.validateConfig();
+
+          let report;
+          /** prepare pngs of all the images required */
+          report = await this.prepareAllSizedImages();
+
+          /** generate the icons specified in config */
+          report = await this.generateIcons(report);
+
+          /** remove the temporary png categorisation outputs */
+          report = await this.removeTemporaryFolders(report);
+
           resolve(report);
         } catch (error) {
           reject(error);

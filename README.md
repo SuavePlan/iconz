@@ -6,26 +6,36 @@ files automatically. (Now with command-line functionality).
 * [Installation](#installation)
 * [How to Use](#how-to-use)
   * [Command Line](#command-line)
-  * [Minimal Setup](#minimal-nodejs-setup)
-  * [Custom Sizes](#custom-sizes)
-  * [Using Actions](#using-actions)
-  * [Advanced](#advanced)
+    * [Piping source image](#piping-an-input-image-into-iconz-for-icon-generation)
+    * [Configuration File](#using-a-configuration-file-to-convert-the-images)
+  * [Script with package.json](#adding-it-as-a-script-to-packagejson)
+  * [NodeJS Setup](#nodejs-setup)
+    * [Minimal Configuration](#minimal-configuration)
+    * [Custom Sizes](#custom-sizes)
+    * [Using Actions](#using-actions)
+    * [Advanced](#advanced)
 * [Configuration Layout](#configuration-layout)
   * [Default Configuration](#default-configuration)
 * [Icon Configuration](#icon-configuration)
   * [Hooks](#how-to-use)
 * [Output Filename parsing](#output-filename-parsing)
   * [Filename examples](#filename-examples)
-  
+
 # Installation
+
+### Install globally to use Iconz on the command line, as an npm script as well as a node module
 
 Node Package Manager (NPM)
 
-    npm install iconz
+```shell
+npm install -g iconz
+```
 
 Yarn
 
-    yarn add iconz
+```shell
+yarn global add iconz
+```
 
 # How to Use
 
@@ -41,7 +51,55 @@ iconz -i my-image.png --icns=app                          Generates an icns icon
 iconz -i my-image.png -f ./thumbs --jpeg={{dims}},32,64   Generates thumbnail icons 32x32.jpg and 64x64.jpg inside 'thumbs' folder                                           
 ```
 
-## Minimal NodeJS Setup
+## Piping an input image into iconz for icon generation
+
+```shell
+cat my_image_path/icon.svg | iconz.js --stdin -f ./public -t ./icons/png
+```
+
+## Using a configuration file to convert the images
+
+```shell
+iconz --config=<path_to_config>.json
+```
+
+### You can also run iconz without parameters.
+
+### save config to a file called ___.iconz.js___ (or ___.iconz.json___ ) to the base of your project folder
+
+#### .iconz.js config example
+
+```javascript
+module.exports = {
+  input: 'public/images/logo.svg',
+  folder: 'public',
+  tmpFolder: 'icons',
+};
+```
+
+#### .iconz.json config example
+
+```json
+{
+  "input": "public/images/logo.svg",
+  "folder": "public",
+  "tmpFolder": "icons"
+}
+```
+
+## Adding it as a script to package.json
+
+```
+{
+  "scripts": {
+    "generate-icons": "iconz -i public/images/logo.svg -t ../icons"
+  }
+}
+```
+
+## NodeJS Setup
+
+## Minimal Configuration
 
 ### import of class
 
@@ -59,7 +117,7 @@ const {Iconz} = require('iconz');
 
 ```javascript
 /** Instantiate a new Iconz class */
-const iconz = new Iconz({src: 'your-image.svg'});
+const iconz = new Iconz({input: 'your-image.svg'});
 
 (async () => {
   /** generate your icons */
@@ -95,7 +153,7 @@ const myIcons = {
   }
 }
 
-const iconz = new Iconz({src: 'your-image.svg', icons: myIcons});
+const iconz = new Iconz({input: 'your-image.svg', icons: myIcons});
 
 (async () => {
   /** generate your icons */
@@ -110,7 +168,7 @@ const iconz = new Iconz({src: 'your-image.svg', icons: myIcons});
 ### See https://sharp.pixelplumbing.com/api-operation for more actions
 
 ```javascript
-const iconz = new Iconz({src: 'your-image.svg'});
+const iconz = new Iconz({input: 'your-image.svg'});
 
 /** daisy-chain the actions to be applied to your import image */
 iconz.addAction('blur', 3)
@@ -131,7 +189,7 @@ iconz.addAction('blur', 3)
 
 ```javascript
 const iconz = new Iconz({
-  src: validImagePath,
+  input: validImagePath,
   /** use temporary folder for testing purposes */
   folder: folder,
   tmpFolder: folder,
@@ -225,25 +283,30 @@ const iconz = new Iconz({
 interface IconzConfigCollection {
   /**
    * This is the image you wish to use as a template
-   * @var src
+   *
    */
-  src?: string;
+  input?:  string | Buffer;
+  
+  /**
+   * This is the temporary holding variable for Buffer
+   * 
+   */
+  buffer?: Buffer;
 
   /**
-   * This is the base folder for all generated icons
+   * This is the base output for all generated icons
    *
    * If left blank, it will use the directory of your
-   * source image
+   * input image
    *
-   * @var folder
    */
-  folder?: string;
+  output?: string;
 
   /**
    * This is where the temporary png images are generated
    *
-   * if left blank, it will generate a temporary folder
-   * inside your operating system's temp folder.
+   * if left blank, it will generate a temporary output
+   * inside your operating system's temp output.
    *
    * If you enter a directory, it will generate the icons
    * within that directory, and it will remain until you
@@ -252,9 +315,8 @@ interface IconzConfigCollection {
    * NOTE: images are generated as {{width}}x{{height}}.png
    * e.g: 16x16.png , 32x32.png .... 1024x1024.png
    *
-   * @var tmpFolder
    */
-  tmpFolder?: string;
+  temp?: string;
 
   /**
    * These options are based upon the sharp library parameter 'options'
@@ -262,9 +324,14 @@ interface IconzConfigCollection {
    * For Resizing See: https://sharp.pixelplumbing.com/api-resize#parameters
    * For Output See: https://sharp.pixelplumbing.com/api-output#png
    *
-   * @var options
    */
   options?: IconzOptions;
+
+  /**
+   * A collection of actions to be run on original image before cloning
+   *
+   */
+  actions?: IconzImageActions;
 
   /**
    * This is an optional object containing the configuration
@@ -272,7 +339,6 @@ interface IconzConfigCollection {
    *
    * If left blank, the defaults will be used
    *
-   * @var icons
    */
   icons?: IconzIconConfig;
 }
@@ -283,6 +349,16 @@ interface IconzConfigCollection {
 ### This is the default configuration to generate icons
 
 ```typescript
+
+/** these are the fallback sizes when a size isn't specified in the configuration */
+const defaultSizes: Record<string, (string | number)[]> = {
+  ico: [16, 24, 32, 48, 64, 128, 256],
+  icns: [16, 32, 64, 128, 256, 512, 1024],
+  png: [16, 32, 64, 128, 256, 512, 1024],
+  jpeg: [16, 32, 64, 128, 256, 512, 1024],
+};
+
+/** this is the main default configuration */
 const defaultConfig: IconzConfigCollection = {
   options: {
     input: <IconzInputOptions>{
@@ -290,7 +366,7 @@ const defaultConfig: IconzConfigCollection = {
     },
     resize: <IconzResizeOptions>{
       fit: 'contain',
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
+      background: {r: 0, g: 0, b: 0, alpha: 0},
       kernel: 'mitchell',
       position: 'centre',
       withoutEnlargement: false,
@@ -317,52 +393,52 @@ const defaultConfig: IconzConfigCollection = {
       type: 'icns',
       name: 'app',
       sizes: [16, 32, 64, 128, 256, 512, 1024],
-      folder: '.',
+      output: '.',
     },
     ico: {
       type: 'ico',
       name: 'app',
       sizes: [16, 24, 32, 48, 64, 128, 256],
-      folder: '.',
+      output: '.',
     },
     favico: {
       type: 'ico',
       name: 'favicon',
       sizes: [16, 24, 32, 48, 64],
-      folder: '.',
+      output: '.',
     },
     faviconPng: {
       type: 'png',
       name: 'favicon',
       sizes: [32],
-      folder: '.',
+      output: '.',
     },
     favicon: {
       type: 'png',
       name: 'favicon-{{dims}}',
       sizes: [32, 57, 72, 96, 120, 128, 144, 152, 195, 228],
-      folder: 'icons',
+      output: 'icons',
     },
     msTile: {
       type: 'png',
       name: 'mstile-{{dims}}',
       sizes: [70, 144, 150, 270, 310, '310x150'],
-      folder: 'icons',
+      output: 'icons',
       options: {
-        background: { r: 0, g: 0, b: 0, alpha: 1 },
+        background: {r: 0, g: 0, b: 0, alpha: 1},
       },
     },
     android: {
       type: 'png',
       name: 'android-chrome-{{dims}}',
       sizes: [36, 48, 72, 96, 144, 192, 256, 384, 512],
-      folder: 'icons',
+      output: 'icons',
     },
     appleTouch: {
       type: 'png',
       name: 'apple-touch-{{dims}}',
       sizes: [16, 32, 76, 96, 114, 120, 144, 152, 167, 180],
-      folder: 'icons',
+      output: 'icons',
     },
   },
 };
@@ -371,7 +447,7 @@ const defaultConfig: IconzConfigCollection = {
 
 ## Icon Configuration
 
-###               
+###                      
 
 ```typescript
 
@@ -383,11 +459,11 @@ type IconzType = 'png' | 'ico' | 'icns';
 /**
  * This is the icon configuration layout
  */
-interface IconzConfig {
+export interface IconzConfig {
   /**
    * This is the type of icon you wish to use
    * it must be either png, ico or icns
-   * @var type
+   *
    */
   type: IconzType;
 
@@ -395,23 +471,22 @@ interface IconzConfig {
    * This is the name of the file you wish to use
    * it is parsed using the handlebars syntax.
    *
+   * @example
    * for an image with the size '24x18' the name
    * would be as follows:
-   * @example 'icon-{{size}}' resolves to 'icon-24x18'
-   * @example 'icon-{{dims}}' resolves to 'icon-24x18'
-   * @example 'icon-{{width}}' resolves to 'icon-24'
-   * @example 'icon-{{height}}' resolves to 'icon-18'
+   * 'icon-{{size}}' resolves to 'icon-24x18'
+   * 'icon-{{dims}}' resolves to 'icon-24x18'
+   * 'icon-{{width}}' resolves to 'icon-24'
+   * 'icon-{{height}}' resolves to 'icon-18'
    *
    * If the size is set as a single number,
    * e.g 24, the {{dims}} variable returns 24x24,
    * however, the {{size}} variable would just return 24.
    *
-   * @example 'icon-{{size}}' resolves to 'icon-24'
-   * @example 'icon-{{dims}}' resolves to 'icon-24x24'
-   * @example 'icon-{{width}}' resolves to 'icon-24'
-   * @example 'icon-{{height}}' resolves to 'icon-24'
-   *
-   * @var name
+   * 'icon-{{size}}' resolves to 'icon-24'
+   * 'icon-{{dims}}' resolves to 'icon-24x24'
+   * 'icon-{{width}}' resolves to 'icon-24'
+   * 'icon-{{height}}' resolves to 'icon-24'
    */
   name: string;
 
@@ -419,26 +494,24 @@ interface IconzConfig {
    * This is an array of sizes, whether as an integer
    * or a string.
    *
+   * @example
    * As a string you can either just use a single number
-   * @example '56' - which will be both the width and height
-   *
-   * Or if the width differs from the height, use the following format
-   * @example '120x80' which means the width 120 and height of 80.
-   *
-   * @var sizes
+   * '56' - which will be both the width and height
+   * @example
+   * If the width differs from the height, use the following format
+   * '120x80' which means the width 120 and height of 80.
    */
   sizes: (string | number)[];
 
   /**
-   * This is the folder you wish to store the images
+   * This is the output you wish to store the images
    * generated from this configuration.
    *
-   * If left blank, it will use the default folder
+   * If left blank, it will use the default output
    * from the main configuration.
    *
-   * @var folder
    */
-  folder?: string;
+  output?: string;
 
   /**
    * These resizing options are ones from the sharp library,
@@ -447,14 +520,11 @@ interface IconzConfig {
    * If left blank, defaults will be chosen
    *
    * @see https://sharp.pixelplumbing.com/api-resize
-   *
    * @example
    * {
    *   position: 'centre', fit: 'contain', kernel: 'mitchell',
    *   background: { r: 255, g: 127, b: 0, alpha: 0.5 }
    * }
-   *
-   * @var options
    */
   options?: IconzResizeOptions;
 
@@ -463,26 +533,20 @@ interface IconzConfig {
    * to alter any of the icons during generation, the following
    * hooks can be used.
    *
-   * @hook preResize - This runs just before the image
-   * is resized and converted to png
-   *
-   * @hook postResize - This is after the conversion,
-   * but before conversion to a buffer and saved to a file
-   *
    * If you wish for the system to stop processing the image
    * after your hook, you must use
    * resolve(undefined) instead of resolve(image) within the promise
    *
-   * @hooks
+   * @function preResize - This runs just before the image is resized and converted to png
+   * @function postResize - This is after the conversion, but before conversion to a buffer and saved to a file
    */
   hooks?: IconzHooks;
 
   /**
    * should you wish to temporarily disable a single configuration
    * set the enabled var to false
-   * @example enabled: false
    *
-   * @var enabled
+   * @example enabled: false
    */
   enabled?: boolean;
 }
@@ -574,7 +638,7 @@ Image Dimensions
 {{height}} - the height of the icon
 ```
 
-Configuration of the current image being created 
+Configuration of the current image being created
 
 ```text
 {{config.type}} - Type of icon being generated (png, ico, icns or jpeg)
@@ -582,7 +646,9 @@ Configuration of the current image being created
 {{config.sizes.0}} - First image in sizes
 {{config.folder}} - Folder specified as output folder
 ```
+
 (See: [Sharp Image Processor Resize Options](https://sharp.pixelplumbing.com/api-resize#metadata))
+
 ```text
 {{config.options.fit}} - Resize fit type
 {{config.options.position}} - Resize position type
@@ -666,15 +732,50 @@ For more, see link above.
 ```text
 my-icon-{{dims}} -> my-icon-48x54.png
 ```
+
 ```text
 icon-{{counter}} -> icon-0.png
 ```
+
 ```text
 favicon-{{env.USER}}-{{date.date}}_{{date.time}} -> favicon-admin-20210718_233500.png
 ```
+
 ```text
 favicon-{{env.USER}}-{{date.date}}_{{date.time}} -> favicon-admin-20210718_233500.png
 ```
+
 ```text
 icon-{{config.options.fit}}-{{counter}} -> icon-cover-0.png
 ```
+
+## Output path generation
+
+> ### If relative paths are used:
+> The folder chain is as follows for the output folder name:
+>```text
+> cwd (current working directory) / input folder / output folder
+>```
+> ### NOTE : The temp folder is created in the OS temp folder unless specified otherwise.
+> If specified, the folder chain is as follows for the temp folder name (a child of the output folder):
+>```text
+> cwd (current working directory) / input folder / output folder / temp
+>```
+
+> #### When specifying 'input', 'output' and 'temp' folders, please note that depending on whether they are absolute or relative can change the destination paths.
+
+> [X] indicates an ___absolute___ path is used in the configuration <br />
+> [ . ] indicates a ___relative___ path is used in the configuration
+
+**source**|**source**|**source**|**resulting**|**destination**|**destination**
+:-----:|:-----:|:-----:|:-----:|:-----:|:-----:
+input|output|temp|path|output|temp
+[X]|[X]|[X]|->|output|temp
+[X]|[X]|[ . ]|->|output|output / temp
+[X]|[ . ]|[X]|->|input / output|temp
+[X]|[ . ]|[ . ]|->|input / output|input / output / temp
+[ . ]|[X]|[X]|->|output|temp
+[ . ]|[X]|[ . ]|->|output|output / temp
+[ . ]|[ . ]|[X]|->|cwd / input / output|temp
+[ . ]|[ . ]|[ . ]|->|cwd / input / output|cwd / input / output / temp
+

@@ -1,5 +1,4 @@
 import fs from 'fs';
-import path from 'path';
 import os from 'os';
 import crypto from 'crypto';
 import sinon, { stub } from 'sinon';
@@ -18,16 +17,19 @@ import {
   IconzResizeOptions,
   defaultConfig,
   IconzInputOptions,
+  //  IconzIconConfig,
 } from '../src';
 
-const validImagePath = path.join(__dirname, 'images', 'icon.svg');
-const validIcoPath = path.join(__dirname, 'images', 'icon.ico');
+const validImageDir = Iconz.path().join(__dirname, 'images');
+const validImagePath = Iconz.path().join(validImageDir, 'icon.svg');
+const validIcoDir = Iconz.path().join(__dirname, 'images');
+const validIcoPath = Iconz.path().join(validIcoDir, 'icon.ico');
 
-const randomHex = () => crypto.randomBytes(16).toString('hex');
-const randomFolder = () => Iconz.path().join(os.tmpdir(), randomHex());
+const randomHex = (bytes?: number) => crypto.randomBytes(Number.isInteger(bytes) ? bytes : 4).toString('hex');
+const randomOSTempDir = (bytes?: number) => Iconz.path().join(os.tmpdir(), randomHex(bytes));
 
-const folderName = randomFolder();
-const tempFolderName = randomFolder();
+const outputName = randomOSTempDir();
+// const tempFolderName = randomFolder();
 
 // set density lower for tests
 (<IconzInputOptions>defaultConfig.options.input).density = 72;
@@ -42,160 +44,128 @@ describe('Iconz', () => {
       }, 'config is missing');
     });
 
-    it('invalid file path', () => {
+    it('empty config', () => {
       assert.throws(() => {
-        new Iconz({ src: './test.png' });
-      }, 'Source image not found');
+        // @ts-ignore
+        new Iconz({});
+      }, 'input image not found');
     });
 
     it('should pass with valid path', () => {
       assert.equal(
-        new Iconz({ src: validImagePath }) instanceof Iconz,
+        new Iconz({ input: validImagePath }) instanceof Iconz,
         true,
         'Instantiation with valid path should pass',
       );
     });
 
-    it('invalid folder', () => {
+    it('should fail with unreadable file', () => {
+      const testStub = stub(fs, <any>'readFileSync').returns(false);
+
       assert.throws(() => {
         // @ts-ignore
-        new Iconz({ src: validImagePath, folder: {} });
-      }, 'Invalid folder name');
+        new Iconz({ input: validImagePath });
+      }, 'input image is unreadable');
+
+      testStub.restore();
+    });
+
+    it('invalid output', () => {
+      assert.throws(() => {
+        // @ts-ignore
+        new Iconz({ input: validImagePath, output: {} });
+      }, 'Invalid output name');
     });
 
     it('icons config as string', () => {
       assert.throws(() => {
         // @ts-ignore
-        new Iconz({ src: validImagePath, icons: 'string' });
+        new Iconz({ input: validImagePath, icons: 'string' });
       }, 'Icon configuration is invalid');
     });
 
     it('icons config as number', () => {
       assert.throws(() => {
         // @ts-ignore
-        new Iconz({ src: validImagePath, icons: 1 });
+        new Iconz({ input: validImagePath, icons: 1 });
       }, 'Icon configuration is invalid');
     });
 
     it('icons config as empty object', () => {
       assert.throws(() => {
-        new Iconz({ src: validImagePath, icons: {} });
+        new Iconz({ input: validImagePath, icons: {} });
       }, 'Icon configuration not set');
     });
 
-    it('temp folder as null', () => {
+    it('temp output as null', () => {
       assert.throws(() => {
-        new Iconz({ src: validImagePath, tmpFolder: null });
-      }, 'Invalid temp folder');
+        new Iconz({ input: validImagePath, temp: null });
+      }, 'Invalid temp output');
     });
 
-    it('temp folder as number', () => {
-      assert.throws(() => {
-        // @ts-ignore
-        new Iconz({ src: validImagePath, tmpFolder: 1 });
-      }, 'Invalid temp folder');
-    });
-
-    it('temp folder as empty object', () => {
+    it('temp output as number', () => {
       assert.throws(() => {
         // @ts-ignore
-        new Iconz({ src: validImagePath, tmpFolder: {} });
-      }, 'Invalid temp folder');
+        new Iconz({ input: validImagePath, temp: 1 });
+      }, 'Invalid temp output');
     });
 
-    it('temp folder as empty string', () => {
+    it('temp output as empty object', () => {
+      assert.throws(() => {
+        // @ts-ignore
+        new Iconz({ input: validImagePath, temp: {} });
+      }, 'Invalid temp output');
+    });
+
+    it('temp output as empty string', () => {
       assert.doesNotThrow(() => {
-        new Iconz({ src: validImagePath, tmpFolder: '' });
-      }, 'Instantiation with invalid temp folder should fail');
+        new Iconz({ input: validImagePath, temp: '' });
+      }, 'Instantiation with invalid temp output should fail');
     });
   });
 
   describe('validateConfig()', () => {
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
-    it('validateConfig(null)', () => {
-      assert.throws(() => {
-        iconz.validateConfig(null);
-      }, 'Invalid configuration');
-    });
-
-    it('validateConfig with invalid src', () => {
-      const testStub = stub(fs, <any>'existsSync');
-      testStub.returns(false);
-
-      assert.throws(() => {
-        iconz.validateConfig({ src: validImagePath });
-      }, 'Source image not found');
-
-      testStub.restore();
-    });
-
-    it('validateConfig (unable to mkdirSync)', () => {
-      const testStub = stub(fs, <any>'mkdirSync');
-      testStub.throws(new Error());
+    it('validateConfig not relative or absolute path', () => {
+      const testStubs = [stub(iconz, <any>'isAbsolutePath').returns(false)];
+      expect(() => {
+        // @ts-ignore
+        iconz.validateConfig(0);
+      }, 'should throw error').to.throw('Invalid configuration');
 
       expect(() => {
-        iconz.validateConfig({ src: validImagePath, folder: folderName });
-      }, 'should throw error').to.not.throw('Invalid configuration');
-      testStub.restore();
-    });
-
-    it('validateConfig tmpFolder (unable to mkdirSync)', () => {
-      const testStub = stub(fs, <any>'mkdirSync');
-      testStub.throws(new Error());
-
+        iconz.validateConfig({ input: null });
+      }, 'should throw error').to.throw('input image not found');
       expect(() => {
-        iconz.validateConfig({ src: validImagePath, folder: folderName, tmpFolder: tempFolderName });
-      }, 'should throw error').to.not.throw('Invalid configuration');
-      testStub.restore();
-    });
-
-    it('validateConfig icons not an object', () => {
-      const testStub = stub(fs, <any>'mkdirSync');
-      testStub.returns(true);
+        iconz.validateConfig({ input: '.' });
+      }, 'should throw error').to.throw('input image not found');
 
       expect(() => {
         // @ts-ignore
-        iconz.validateConfig({ src: validImagePath, folder: folderName, tmpFolder: tempFolderName, icons: 'test' });
+        iconz.validateConfig({ input: validImagePath, output: 0 });
+      }, 'should throw error').to.throw('Invalid output name');
+
+      expect(() => {
+        // @ts-ignore
+        iconz.validateConfig({ input: validImagePath, output: outputName, temp: 0 });
+      }, 'should throw error').to.throw('Invalid temp output name');
+
+      expect(() => {
+        // @ts-ignore
+        iconz.validateConfig({ input: validImagePath, output: outputName, icons: 0 });
       }, 'should throw error').to.throw('Icon configuration is invalid');
-      testStub.restore();
-    });
 
-    it('validateConfig icons empty', () => {
-      const testStub = stub(fs, <any>'mkdirSync');
-      testStub.returns(true);
       expect(() => {
-        iconz.validateConfig({ src: validImagePath, folder: folderName, tmpFolder: tempFolderName, icons: {} });
+        iconz.validateConfig({ input: validImagePath, output: outputName, icons: {} });
       }, 'should throw error').to.throw('Icon configuration not set');
-      testStub.restore();
-    });
-
-    it('validateConfig not relative or absolute path', () => {
-      const testStubs = [
-        stub(iconz, <any>'isAbsolutePath').returns(false),
-        stub(iconz, <any>'isRelativePath').returns(false),
-      ];
-      expect(() => {
-        iconz.validateConfig({ src: validImagePath, folder: folderName, tmpFolder: tempFolderName, icons: {} });
-      }, 'should throw error').to.throw('Invalid temp folder name');
-
-      for (const testStub of testStubs) testStub.restore();
-    });
-
-    it('validateConfig mkdirSync error', () => {
-      const testStubs = [stub(fs, <any>'existsSync'), stub(fs, <any>'mkdirSync').throws(new Error())];
-      testStubs[0].withArgs(folderName).returns(false).withArgs(validImagePath).returns(true);
-
-      expect(() => {
-        iconz.validateConfig({ src: validImagePath, folder: folderName, tmpFolder: tempFolderName, icons: {} });
-      }, 'should throw error').to.throw(/^Unable to create folder/);
 
       for (const testStub of testStubs) testStub.restore();
     });
   });
 
   describe('addIconConfig()', () => {
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
     it('with no parameters passed', () => {
       assert.throws(() => {
@@ -246,7 +216,7 @@ describe('Iconz', () => {
   });
 
   describe('mergeConfig()', () => {
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
     it('single level', async () => {
       assert.deepStrictEqual(iconz.mergeConfig({ a: 1 }, { b: 2 }), { a: 1, b: 2 });
@@ -305,30 +275,39 @@ describe('Iconz', () => {
 
   describe('getConfig()', () => {
     it('clone is false', () => {
-      const iconz = new Iconz({ src: validImagePath });
+      const iconz = new Iconz({ input: validImagePath });
       assert.equal(
-        iconz.getConfig(false).src === validImagePath &&
-          (iconz.getConfig(false).src = 'testing') &&
-          iconz.getConfig(false).src === 'testing',
+        iconz.getConfig(false).input === validImagePath &&
+          (iconz.getConfig(false).input = 'testing') &&
+          iconz.getConfig(false).input === 'testing',
         true,
         'should return testing',
       );
     });
     it('no options', () => {
-      const iconz = new Iconz({ src: validImagePath });
+      const iconz = new Iconz({ input: validImagePath });
       assert.equal(
-        iconz.getConfig().src === validImagePath &&
-          (iconz.getConfig().src = 'testing') &&
-          iconz.getConfig().src === validImagePath,
+        iconz.getConfig().input === validImagePath &&
+          (iconz.getConfig().input = 'testing') &&
+          iconz.getConfig().input === validImagePath,
         true,
         `should return ${validImagePath}`,
+      );
+    });
+
+    it('with buffer', () => {
+      const iconz = new Iconz({ buffer: Buffer.from([]), output: '.' });
+      assert.equal(
+        iconz.getConfig().buffer === undefined,
+        true,
+        `should return undefined, as it is now being stored internally`,
       );
     });
   });
 
   describe('getInputOptions()', () => {
     it('clone is false', async () => {
-      const iconz = new Iconz({ src: validImagePath });
+      const iconz = new Iconz({ input: validImagePath });
 
       assert.equal(
         (await iconz.getInputOptions(false)).density === 72 &&
@@ -340,7 +319,7 @@ describe('Iconz', () => {
     });
 
     it('no options', async () => {
-      const iconz = new Iconz({ src: validImagePath });
+      const iconz = new Iconz({ input: validImagePath });
 
       assert.equal(
         (await iconz.getInputOptions()).density === 72 &&
@@ -352,32 +331,8 @@ describe('Iconz', () => {
     });
   });
 
-  describe('absoluteFolderPath()', () => {
-    // prepare new Iconz instance
-    const iconz = new Iconz({ src: validImagePath });
-
-    const absolutePath = iconz.path().join(iconz.path().dirname(validImagePath), 'test');
-
-    it('using relative path', async () => {
-      assert.equal(iconz.absoluteFolderPath('test'), absolutePath);
-    });
-
-    it('using relative path', async () => {
-      assert.equal(iconz.absoluteFolderPath(path.join('.', 'test')), absolutePath);
-    });
-
-    it('using absolute path', async () => {
-      assert.equal(iconz.absoluteFolderPath('./test'), absolutePath);
-    });
-
-    it('fixing relative path', async () => {
-      const iconz = new Iconz({ src: validImagePath, folder: '.' });
-      expect(iconz.absoluteFolderPath('./test') === iconz.path().join(process.cwd(), 'test'));
-    });
-  });
-
   describe('generateTargetFilepathFromOptions()', () => {
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
     it('using options', () => {
       expect(
@@ -388,16 +343,8 @@ describe('Iconz', () => {
     });
   });
 
-  describe('generateWidthAndHeightFromSize()', () => {
-    const iconz = new Iconz({ src: validImagePath });
-
-    it('using integer', () => {
-      assert.deepStrictEqual(iconz.generateWidthAndHeightFromSize(1), [1, 1], 'should be equal');
-    });
-  });
-
   describe('getChosenFilesForIcon()', () => {
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
     const config = <IconzConfig>dummyData.config.icons.icns;
     const report = <IconzReport>dummyData.report;
 
@@ -415,9 +362,9 @@ describe('Iconz', () => {
       assert(Array.isArray(chosen.chosenFiles), 'returns object');
     });
 
-    it('with parameters (without folder)', async () => {
+    it('with parameters (without output)', async () => {
       const configWithoutFolder = <IconzConfig>iconz.clone(config);
-      // remove folder for test
+      // remove output for test
       delete configWithoutFolder.folder;
 
       const chosen = await iconz.getChosenFilesForIcon(configWithoutFolder, report);
@@ -430,7 +377,7 @@ describe('Iconz', () => {
   });
 
   describe('getLargestSize()', () => {
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
     it('no parameters', async () => {
       // @ts-ignore
@@ -480,7 +427,7 @@ describe('Iconz', () => {
   });
 
   describe('bgHexToObj()', () => {
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
     it('with invalid hex (number)', async () => {
       assert.throws(() => {
@@ -542,7 +489,7 @@ describe('Iconz', () => {
   });
 
   describe('bgObjToHex()', () => {
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
     it('with invalid object (number)', () => {
       assert.throws(() => {
@@ -590,7 +537,7 @@ describe('Iconz', () => {
 
     const after = Buffer.from([1, 2, 3, 4, 5, 6, 7, 8]);
 
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
     it('argb2rgba', async () => {
       iconz.argb2rgba(before);
@@ -603,7 +550,7 @@ describe('Iconz', () => {
 
     const after = Buffer.from([4, 1, 2, 3, 8, 5, 6, 7]);
 
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
     it('rgba2argb', async () => {
       iconz.rgba2argb(before);
@@ -612,7 +559,7 @@ describe('Iconz', () => {
   });
 
   describe('getParserValues()', () => {
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
     it('getParserValues', async () => {
       const values = iconz.getParserValues({ test: 'value' }, true);
@@ -625,7 +572,7 @@ describe('Iconz', () => {
   });
 
   describe('parseTemplate()', () => {
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
     it('parseTemplate {{test.this}} value true', async () => {
       const result = iconz.parseTemplate('{{test.this}}', { test: { this: 'true' } });
@@ -649,7 +596,7 @@ describe('Iconz', () => {
   });
 
   describe('getParserValues()', () => {
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
     const values = iconz.getParserValues({ test: 'value' }, true);
 
     it('getParserValues {{date.epoch}}', async () => {
@@ -672,7 +619,7 @@ describe('Iconz', () => {
     let iconz: Iconz;
 
     beforeEach(() => {
-      iconz = new Iconz({ src: validImagePath });
+      iconz = new Iconz({ input: validImagePath });
     });
 
     it('add action, no name, no args', async () => {
@@ -699,80 +646,108 @@ describe('Iconz', () => {
   });
 
   describe('run()', () => {
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
     it('prepareAllSizedImages throws error', async () => {
       const testStub = stub(iconz, <any>'prepareAllSizedImages');
       testStub.throws(new Error());
 
-      const result = await iconz.run().catch((e) => e.message);
+      const report = await iconz.run().catch((e) => e.message);
 
       testStub.restore();
 
-      assert.equal(typeof result, 'string', 'promise should be reject response');
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
+      assert.equal(typeof report, 'string', 'promise should be reject response');
     });
 
     it('prepareAllSizedImages throws error', async () => {
-      const testStub = stub(iconz, <any>'generateWidthAndHeightFromSize');
+      const testStub = stub(Iconz, <any>'generateWidthAndHeightFromSize');
       testStub.returns(['M', 'X']);
 
-      const result = await iconz.run().catch((e) => e.message);
+      const report = await iconz.run().catch((e) => e.message);
 
       testStub.restore();
-      assert.equal(typeof result, 'string', 'should throw error');
+
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
+      assert.equal(typeof report, 'string', 'should throw error');
     });
 
     it('generateIcons disable all icon configs', async () => {
       const iconz = new Iconz({
-        src: validImagePath,
+        input: validImagePath,
         icons: { test: { enabled: false, type: 'ico', name: 'test', sizes: [12, 24, 36] } },
       });
 
-      const result = await iconz.run().catch((e) => e.message);
+      const report = await iconz.run().catch((e) => e.message);
 
-      assert.deepStrictEqual(result, Iconz.newReport(), 'should return empty results');
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
+      assert.deepStrictEqual(report, Iconz.newReport(), 'should return empty results');
     });
 
-    it('generateIcons no sizes, uses defaults.', async () => {
+    it('generateIcons (png) no sizes, uses defaults.', async () => {
       const iconz = new Iconz({
-        src: validImagePath,
+        input: validImagePath,
+        icons: { test: { enabled: true, type: 'png', name: 'test', sizes: [] } },
+      });
+
+      const report = await iconz.run().catch((e) => e.message);
+
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
+      assert.equal(
+        typeof report,
+        'string',
+        'should fail, as there are multiple defaults, name must be unique (e.g test-{{counter}})',
+      );
+    });
+
+    it('generateIcons (ico) no sizes, uses defaults.', async () => {
+      const iconz = new Iconz({
+        input: validImagePath,
         icons: { test: { enabled: true, type: 'ico', name: 'test', sizes: [] } },
       });
 
-      const result = await iconz.run().catch((e) => e.message);
+      const report = await iconz.run().catch((e) => e.message);
 
-      assert.equal(typeof result, 'object', 'should return object');
-      assert.equal(typeof result.ico, 'object', 'should return object');
-      assert.equal(Object.values(result.ico).length, 1, 'should return one icon result');
-      /** remove test file */
-      fs.unlinkSync(result.ico.test);
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
+      assert.equal(typeof report, 'object', 'should return object');
+      assert.equal(typeof report.ico, 'object', 'should return object');
+      assert.equal(Object.values(report.ico).length, 1, 'should return one icon result');
     });
 
-    it('generateIcons multi sized without unique name field', async () => {
+    it('generateIcons (png) multi sized without unique name field', async () => {
       const iconz = new Iconz({
-        src: validImagePath,
+        input: validImagePath,
         icons: { test: { enabled: true, type: 'png', name: 'test', sizes: [12, 24, 36] } },
       });
 
-      const result = await iconz.run().catch((e) => e.message);
+      const report = await iconz.run().catch((e) => e.message);
 
-      assert(/^Icons\sconfig/.test(result), 'Should display error about icon config');
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
+      assert(/^Icons\sconfig/.test(report), 'Should display error about icon config');
     });
 
     it('generateIcons throws error', async () => {
       const testStub = stub(iconz, <any>'generateIcons');
       testStub.throws(new Error());
 
-      const result = await iconz.run().catch((e) => e.message);
+      const report = await iconz.run().catch((e) => e.message);
 
       testStub.restore();
 
-      assert.equal(typeof result, 'string', 'should throw error');
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
+      assert.equal(typeof report, 'string', 'should throw error');
     });
 
     it('generateIcons throws error with invalid dimensions', async () => {
       const iconz = new Iconz({
-        src: validImagePath,
+        input: validImagePath,
         icons: {
           favicon: {
             enabled: true,
@@ -784,14 +759,16 @@ describe('Iconz', () => {
         },
       });
 
-      const result = await iconz.run().catch((e) => e.message);
+      const report = await iconz.run().catch((e) => e.message);
 
-      expect(result, 'promise should be reject response').to.eq('Invalid size 45m34');
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
+      expect(report, 'promise should be reject response').to.eq('Invalid size 45m34');
     });
 
     it('generateIcons throws error with invalid output format', async () => {
       const iconz = new Iconz({
-        src: validImagePath,
+        input: validImagePath,
         icons: {
           favicon: {
             enabled: true,
@@ -809,21 +786,25 @@ describe('Iconz', () => {
         },
       });
 
-      const result = await iconz.run().catch((e) => e.message);
+      const report = await iconz.run().catch((e) => e.message);
 
-      assert.equal(result, 'Output format is invalid', 'promise should be reject response');
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
+      assert.equal(report, 'Output format is invalid', 'promise should be reject response');
     });
 
     it('generateIcons', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validImagePath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
       });
 
       const report = await iconz.run().catch((e) => e.message);
+
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
 
       assert.notEqual(typeof report, 'string', 'generation should be successful');
       assert(typeof report === 'object', 'report should return an object');
@@ -832,16 +813,18 @@ describe('Iconz', () => {
     });
 
     it('generateIcons with actions', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validImagePath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
         actions: [{ cmd: 'rotate', args: [180] }],
       });
 
       const report = await iconz.run().catch((e) => e.message);
+
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
 
       assert.notEqual(typeof report, 'string', 'generation should be successful');
       assert(typeof report === 'object', 'report should return an object');
@@ -850,15 +833,17 @@ describe('Iconz', () => {
     });
 
     it('generateIcons from ico', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validIcoPath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validIcoPath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
       });
 
       const report = await iconz.run().catch((e) => e.message);
+
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
 
       assert.notEqual(typeof report, 'string', 'generation should be successful');
       assert(typeof report === 'object', 'report should return an object');
@@ -867,12 +852,12 @@ describe('Iconz', () => {
     });
 
     it('pngGenerator fail', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validImagePath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
       });
 
       const testStub = stub(iconz, <any>'parseTemplate');
@@ -881,18 +866,21 @@ describe('Iconz', () => {
         .throws(new Error());
 
       const report = await iconz.run().catch((e) => e.message);
+
       testStub.restore();
+
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
 
       assert.equal(typeof report, 'string', 'generation should fail');
     });
 
     it('icnsGenerator fail', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validImagePath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
       });
 
       const testStub = stub(iconz, <any>'parseTemplate');
@@ -912,16 +900,18 @@ describe('Iconz', () => {
 
       testStub.restore();
 
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
       assert.equal(typeof report, 'string', 'generation should fail');
     });
 
     it('icoGenerator fail', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validImagePath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
       });
 
       const testStub = stub(iconz, <any>'parseTemplate');
@@ -941,16 +931,18 @@ describe('Iconz', () => {
 
       testStub.restore();
 
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
       assert.equal(typeof report, 'string', 'generation should fail');
     });
 
     it('icoGenerator (getChosenFilesForIcon returns empty chosenFiles)', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validImagePath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
       });
 
       const testStub = stub(iconz, <any>'getChosenFilesForIcon');
@@ -960,16 +952,18 @@ describe('Iconz', () => {
 
       testStub.restore();
 
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
       assert.equal(typeof report, 'string', 'generation should fail');
     });
 
     it('icoGenerator (trigger Unable to create ico error)', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validImagePath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
       });
 
       const testStub = stub(iconz, <any>'getChosenFilesForIcon');
@@ -993,12 +987,12 @@ describe('Iconz', () => {
     });
 
     it('icoGenerator (getChosenFilesForIcon throws exception)', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validImagePath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
       });
 
       const testStub = stub(iconz, <any>'getChosenFilesForIcon');
@@ -1008,16 +1002,18 @@ describe('Iconz', () => {
 
       testStub.restore();
 
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
       assert.equal(typeof report, 'string', 'generation should fail');
     });
 
     it('jpgGenerator (getChosenFilesForIcon throws exception)', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validImagePath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
         icons: {
           thumbs: {
             type: 'jpeg',
@@ -1034,16 +1030,18 @@ describe('Iconz', () => {
 
       testStub.restore();
 
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
       assert.equal(typeof report, 'string', 'generation should fail');
     });
 
     it('jpgGenerator', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validImagePath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
         icons: {
           thumbs: {
             type: 'jpeg',
@@ -1055,26 +1053,25 @@ describe('Iconz', () => {
 
       const report = await iconz.run().catch((e) => e.message);
 
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
       assert.equal(typeof report, 'object', 'generation should fail');
     });
 
     it('generateIcons', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validImagePath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
         icons: {
           rgb: {
             type: 'png',
             name: 'rgb-{{dims}}',
             sizes: [128, 256, 512, 1024],
             hooks: {
-              preResize: (
-                self: Iconz,
-                image: IconzImage,
-              ): Promise<IconzImage> => Promise.resolve(image),
+              preResize: (self: Iconz, image: IconzImage): Promise<IconzImage> => Promise.resolve(image),
               postResize: (
                 self: Iconz,
                 image: IconzImage,
@@ -1085,8 +1082,8 @@ describe('Iconz', () => {
                 return new Promise((resolve, reject) => {
                   (async () => {
                     try {
-                      // get folder for output
-                      const dir = self.getConfig().folder;
+                      // get output for output
+                      const dir = self.getConfig().output;
 
                       // colourSpaces to test
                       const colourSpace = {
@@ -1145,6 +1142,8 @@ describe('Iconz', () => {
 
       const report = await iconz.run().catch((e) => e.message);
 
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
       assert(typeof report === 'object', 'report should be an object');
       assert.equal(typeof report.failed, 'object', 'report failed should be an object');
       assert.equal(Object.keys(report.failed).length, 0, 'nothing should have failed');
@@ -1155,7 +1154,7 @@ describe('Iconz', () => {
       testStub.throws(new Error());
 
       const iconz = new Iconz({
-        src: validImagePath,
+        input: validImagePath,
         icons: {
           favicon: {
             enabled: true,
@@ -1167,20 +1166,22 @@ describe('Iconz', () => {
         },
       });
 
-      let result;
+      let report;
+
       await iconz
         .run()
         .then((data) => {
-          result = data;
+          return (report = data);
         })
+        .then((report) => iconz.removeAllGeneratedImages(report, true))
         .catch((e) => {
-          result = e;
+          report = e;
         })
         .finally(() => {
           testStub.restore();
         });
 
-      assert.equal(typeof result, 'object', 'should throw error');
+      assert.equal(typeof report, 'object', 'should throw error');
     });
 
     it('getOptions throws error', async () => {
@@ -1195,12 +1196,12 @@ describe('Iconz', () => {
     });
 
     it('getChosenFilesForIcon (missing data throws exception)', async () => {
-      const folder = randomFolder();
+      const output = randomOSTempDir();
       const iconz = new Iconz({
-        src: validImagePath,
-        // use temporary folder for testing purposes
-        folder: folder,
-        tmpFolder: folder,
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
       });
 
       // @ts-ignore
@@ -1216,22 +1217,130 @@ describe('Iconz', () => {
     const join = Iconz.path().join;
     const filename = randomHex();
     const dirname = randomHex();
+
+    // temporary dir
     const dir = join(os.tmpdir(), dirname);
+
+    // temporary dir file
     const reportFile = join(dir, filename);
+
+    // filename
     const duplicateFile = join(os.tmpdir(), filename);
+
+    // modified file
     const modifiedFile = join(os.tmpdir(), dirname + '_' + filename);
+
+    // make temporary dir
     fs.mkdirSync(dir, { recursive: true });
+
+    // write file to temporary dir
     fs.writeFileSync(reportFile, 'test');
+
+    // copy file to parent of temporary dir
     fs.copyFileSync(reportFile, duplicateFile);
 
-    const iconz = new Iconz({ src: validImagePath });
+    const iconz = new Iconz({ input: validImagePath });
 
+    // get blank report
     const report: IconzReport = Iconz.newReport();
-    report.tmp[reportFile] = {};
+    report.temp[reportFile] = {};
 
     it('duplicate filename exists', async () => {
-      await iconz.removeTemporaryFolders(report);
-      assert.equal(report.tmp[modifiedFile], 'complete', 'report should mark duplicate as complete');
+      const newReport = await iconz.removeTemporaryFolders(report);
+      assert.equal(newReport.temp[modifiedFile], 'complete', 'report should mark duplicate as complete');
+    });
+  });
+
+  describe('fullPath()', () => {
+    const fullPath = randomOSTempDir();
+    const absolutetempPath = randomOSTempDir();
+    const relativeFolderPath = Iconz.path().basename(fullPath);
+    const relativetempPath = Iconz.path().basename(absolutetempPath);
+
+    it('temp and output absolute outputs specified', async () => {
+      const iconz = new Iconz({
+        input: validImagePath,
+        // use temporary output for testing purposes
+        output: fullPath,
+        temp: absolutetempPath,
+      });
+
+      for (const key of [fullPath, absolutetempPath]) {
+        assert.equal(iconz.fullPath(key), key, 'absolute paths should not change');
+      }
+      for (const key of [relativeFolderPath, relativetempPath]) {
+        assert.notEqual(iconz.fullPath(key), key, 'relative paths should return difference');
+      }
+    });
+  });
+
+  describe('fullPath()', () => {
+    const cwd = process.cwd();
+
+    const config: Record<string, any> = {
+      image: 'icon.svg',
+      relative: {
+        image: '',
+        dir: '',
+        output: '',
+        temp: '',
+      },
+      absolute: {
+        image: '',
+        dir: '',
+        output: '',
+        temp: '',
+      },
+    };
+
+    const p = Iconz.path();
+    const j = p.join;
+
+    // prepare relative paths
+    config.relative.dir = j('test', 'images');
+    config.relative.image = j(config.relative.dir, config.image);
+    config.relative.output = 'output';
+    config.relative.temp = 'temp';
+
+    // prepare calculated absolute paths
+    config.absolute.dir = p.dirname(j(cwd, config.relative.dir));
+    config.absolute.image = j(cwd, config.relative.image);
+    config.absolute.output = j(cwd, config.relative.dir, config.relative.output);
+    config.absolute.temp = j(cwd, config.relative.dir, config.relative.output, config.relative.temp);
+
+    describe('output test', () => {
+      describe('input is absolute path', () => {
+        // prepare new Iconz instance
+        const iconz = new Iconz({ input: config.absolute.image });
+
+        it('using relative output_path', async () => {
+          assert.equal(iconz.fullPath(config.relative.output), iconz.path().join(config.absolute.output));
+        });
+
+        it('using relative ./output_path', async () => {
+          assert.equal(iconz.fullPath(iconz.path().join('.', config.relative.output)), config.absolute.output);
+        });
+
+        it('using absolute output_path', async () => {
+          assert.equal(iconz.fullPath(config.absolute.output), config.absolute.output);
+        });
+      });
+
+      describe('input is relative path', () => {
+        const iconz = new Iconz({ input: config.relative.image });
+
+        it('using relative output_path', async () => {
+          assert.equal(iconz.fullPath(config.relative.output), iconz.path().join(config.absolute.output));
+        });
+
+        it('using relative ./output_path', async () => {
+          assert.equal(iconz.fullPath(iconz.path().join('.', config.relative.output)), config.absolute.output);
+        });
+
+        it('using absolute output_path', async () => {
+          assert.equal(iconz.fullPath(config.absolute.output), config.absolute.output);
+        });
+      });
     });
   });
 });
@@ -1274,6 +1383,20 @@ describe('Iconz (static methods)', () => {
         time: '040506',
         year: '2003',
       });
+    });
+  });
+
+  describe('generateWidthAndHeightFromSize()', () => {
+    it('using integer', () => {
+      assert.deepStrictEqual(Iconz.generateWidthAndHeightFromSize(1), [1, 1], 'should be equal');
+    });
+  });
+
+  describe('makeDirectory()', () => {
+    it('random os temp dir', async () => {
+      const tmpDir = randomOSTempDir();
+
+      assert.equal(await Iconz.makeDirectory(tmpDir), true, 'should be equal');
     });
   });
 });

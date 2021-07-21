@@ -32,7 +32,7 @@ module.exports = {
   rules: {
     '@typescript-eslint/no-explicit-any': 0,
     '@typescript-eslint/no-empty-interface': 0,
-    'no-empty': ['error', {allowEmptyCatch: true}],
+    'no-empty': ['error', { allowEmptyCatch: true }],
   },
   overrides: [],
 };

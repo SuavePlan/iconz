@@ -138,7 +138,7 @@ const dummyData = {
     },
   ],
   report: {
-    tmp: {
+    temp: {
       '/Users/test/icons/7c0a9c857f29e492/16x16.png': {
         fit: 'contain',
         position: 'centre',
