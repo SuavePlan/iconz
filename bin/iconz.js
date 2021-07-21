@@ -101,8 +101,6 @@ function readStdin() {
         ? [Iconz.path().isAbsolute(argv.config) ? argv.config : `${dir}${argv.config}`]
         : [`${configPrefix}.iconz.js`, `${configPrefix}.iconz.json`];
 
-      console.log({ configPaths });
-
       // loop through paths to find config
       for (const configPath of configPaths) {
         const stat = await fs.stat(configPath).catch(() => undefined);
@@ -279,8 +277,6 @@ function readStdin() {
         }
       }
     }
-
-    console.log(config);
 
     /** instantiate iconz class */
     const iconz = new Iconz(config);
