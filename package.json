@@ -1,6 +1,6 @@
 {
   "name": "iconz",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "description": "Icon Generator for the Web",
   "main": "dist/index.js",
   "bin": {
@@ -53,7 +53,6 @@
   "dependencies": {
     "@fiahfy/icns": "^0.0.7",
     "@types/sharp": "^0.28.4",
-    "apple-icns": "^0.2.0",
     "emittery": "^0.9.2",
     "ico-to-png": "^0.2.1",
     "minimist": "^1.2.5",
