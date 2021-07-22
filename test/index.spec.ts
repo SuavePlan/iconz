@@ -24,6 +24,8 @@ const validImageDir = Iconz.path().join(__dirname, 'images');
 const validImagePath = Iconz.path().join(validImageDir, 'icon.svg');
 const validIcoDir = Iconz.path().join(__dirname, 'images');
 const validIcoPath = Iconz.path().join(validIcoDir, 'icon.ico');
+const validIcnsDir = Iconz.path().join(__dirname, 'images');
+const validIcnsPath = Iconz.path().join(validIcnsDir, 'icon.icns');
 
 const randomHex = (bytes?: number) => crypto.randomBytes(Number.isInteger(bytes) ? bytes : 4).toString('hex');
 const randomOSTempDir = (bytes?: number) => Iconz.path().join(os.tmpdir(), randomHex(bytes));
@@ -856,6 +858,25 @@ describe('Iconz', () => {
       const output = randomOSTempDir();
       const iconz = new Iconz({
         input: validIcoPath,
+        // use temporary output for testing purposes
+        output: output,
+        temp: output,
+      });
+
+      const report = await iconz.run().catch((e) => e.message);
+
+      if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
+      assert.notEqual(typeof report, 'string', 'generation should be successful');
+      assert(typeof report === 'object', 'report should return an object');
+      assert.equal(typeof report.failed, 'object', 'report failed should be an object');
+      assert.equal(Object.keys(report.failed).length, 0, 'nothing should have failed');
+    });
+
+    it('generateIcons from icns', async () => {
+      const output = randomOSTempDir();
+      const iconz = new Iconz({
+        input: validIcnsPath,
         // use temporary output for testing purposes
         output: output,
         temp: output,

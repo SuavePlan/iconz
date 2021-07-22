@@ -1,7 +1,7 @@
 # Iconz - Icon Generator for the Web
 
-Convert a single image (.jpg, .png, .webp, .avif, .gif, .svg, .tiff) or icon (.ico) into various sized png, ico and icns
-files automatically. (Now with command-line functionality).
+Convert a single image (.jpg, .png, .webp, .avif, .gif, .svg, .tiff), icon (.ico) or apple icon (.icns) into various
+sized png, ico and icns files automatically. (Now with command-line functionality).
 
 * [Installation](#installation)
 * [How to Use](#how-to-use)
@@ -50,7 +50,7 @@ iconz -i my-image.png                                     Generates default icon
 iconz -i my-image.png -t ./icons                          Generates all the default icons, also keeps the temporary pngs in icons folder 
                                                             (relative to my image.jpg) formatted WxH.png (e.g 32x32.png)
 iconz -i my-image.png --ico=favicon                       Generates an ico file called favicon.ico using the default sizes
-iconz -i my-image.png --icns=app                          Generates an icns icon file called app.icns using the default sizes                                          
+iconz -i my-image.png --icns=app                          Generates an icns icon file called icon.icns using the default sizes                                          
 iconz -i my-image.png -f ./thumbs --jpeg={{dims}},32,64   Generates thumbnail icons 32x32.jpg and 64x64.jpg inside 'thumbs' folder                                           
 ```
 

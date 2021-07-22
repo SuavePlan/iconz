@@ -626,7 +626,7 @@ class Iconz {
 
       /** make name for file */
       config.input = <string>(
-        (this.isAbsolutePath(config.output) ? config : this.path().join(process.cwd(), config.output, filename))
+        (this.isAbsolutePath(config.output) ? config.output : this.path().join(process.cwd(), config.output, filename))
       );
     }
 
@@ -707,6 +707,20 @@ class Iconz {
     this._config.actions ??= [];
     this._config.actions.push({ cmd, args: args.length === 1 && Array.isArray(args[0]) ? [...args[0]] : args });
 
+    return this;
+  }
+
+  /**
+   * Add a batch of actions
+   *
+   * @param {IconzImageAction[]} actions - an array of actions
+   * @returns {this} - Iconz class
+   */
+  addActions(...actions: IconzImageAction[]): this {
+    for (const action of actions) {
+      /** add the action */
+      this.addAction(action.cmd, ...(action.args || []));
+    }
     return this;
   }
 
@@ -1025,8 +1039,27 @@ class Iconz {
    * @param {*} x - potential promise
    * @returns {boolean} - if the item passed in is a promise
    */
-  isPromise(x: unknown) {
+  isPromise(x: unknown): boolean {
     return Object(x).constructor === Promise;
+  }
+
+  async icns2Buffer(file: Buffer, minimumSize?: number): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      (async () => {
+        try {
+          const list = Icns.from(file);
+
+          const item = list.images.reduce((previousValue: IcnsImage, currentValue: IcnsImage) =>
+            currentValue.bytes > previousValue.bytes || (minimumSize && currentValue.bytes < minimumSize * minimumSize)
+              ? previousValue
+              : currentValue,
+          );
+          resolve(item.image);
+        } catch (error) {
+          reject(error);
+        }
+      })();
+    });
   }
 
   /**
@@ -1056,6 +1089,8 @@ class Iconz {
               ? this._buffer
               : this.path().extname(this._config.input) === '.ico'
               ? await icoToPng(await readFile(this._config.input), 1024)
+              : this.path().extname(this._config.input) === '.icns'
+              ? await this.icns2Buffer(await readFile(this._config.input), 1024)
               : this._config.input,
             await this.getInputOptions(),
           );
