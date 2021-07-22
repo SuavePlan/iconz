@@ -1020,6 +1020,16 @@ class Iconz {
   }
 
   /**
+   * method to check if response is promise
+   *
+   * @param {*} x - potential promise
+   * @returns {boolean} - if the item passed in is a promise
+   */
+  isPromise(x: unknown) {
+    return Object(x).constructor === Promise;
+  }
+
+  /**
    * Prepare all images ready for icons
    *
    * @returns {Promise<IconzReport>} - Iconz Report
@@ -1028,6 +1038,10 @@ class Iconz {
     return new Promise((resolve, reject) => {
       (async () => {
         try {
+          /**  instantiate report */
+
+          const imageReport: IconzReport = Iconz.newReport();
+
           /** sharp doesn't read ico files. check buffer, then send to icoToPng first if ico file */
           const isIconBuffer =
             this._buffer &&
@@ -1052,13 +1066,63 @@ class Iconz {
             stats: await img.stats(),
           };
 
-          /** loop through all actions before cloning */
+          const isNumeric = (num: unknown) =>
+            (typeof num === 'number' || (typeof num === 'string' && num.trim() !== '')) && !isNaN(<number>num);
+
+          const replaceNumeric = (val: unknown) => (isNumeric(val) ? Number(val) : val);
+
           if (Array.isArray(this._config.actions)) {
+            /** store original dimensions for use with actions */
+            const originalDimensions = this.getLargestSize([
+              `${this._parserValues.meta.width}x${this._parserValues.meta.height}`,
+            ]);
+
+            /** loop through all actions before cloning */
             for (const key in this._config.actions) {
               const action: IconzImageAction = this._config.actions[key];
+
+              /** clone arguments for temporary replacement of data */
+              const args = Object.values(this.clone(action.args || []));
+
+              /** get current metadata / stats */
+              let extraData = {
+                meta: await img.metadata(),
+                stats: await img.stats(),
+              };
+
+              /** append current dimensions */
+              extraData = {
+                ...extraData,
+                ...{
+                  width: extraData.meta.width,
+                  height: extraData.meta.height,
+                  dims: `${extraData.meta.width}x${extraData.meta.height}`,
+                  size: `${extraData.meta.width}x${extraData.meta.height}`,
+                },
+              };
+
+              /** parse args */
+              for (const key in args) {
+                if (typeof args[key] === 'string') {
+                  args[key] = replaceNumeric(
+                    this.parseTemplate(
+                      args[key],
+                      this.getParserValues({ ...originalDimensions, ...{ last: extraData } }),
+                    ),
+                  );
+                }
+              }
+
               // eslint-disable-next-line @typescript-eslint/ban-ts-comment
               // @ts-ignore
-              img = img[action.cmd](...(action.args || []));
+              const result = img.clone()[action.cmd](...args);
+
+              if (result.constructor && result.constructor.name === 'Sharp') {
+                /** it's returned the image, so continue to process */
+                img = result;
+              } else if (this.isPromise(result)) {
+                /** TODO: callback? */
+              }
             }
           }
 
@@ -1071,10 +1135,6 @@ class Iconz {
 
           /**  create temporary output if needed */
           const tempFolder = this.fullPath(tempPath, undefined, tempPath.indexOf(os.tmpdir()) !== 0);
-
-          /**  instantiate report */
-
-          const imageReport: IconzReport = Iconz.newReport();
 
           const outputOptions = await this.getOutputOptions();
 

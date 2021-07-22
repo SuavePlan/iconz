@@ -369,7 +369,6 @@ describe('Iconz', () => {
 
       const chosen = await iconz.getChosenFilesForIcon(configWithoutFolder, report);
 
-
       assert(typeof chosen === 'object', 'should return object');
       assert.deepStrictEqual(Object.keys(chosen), ['outputDir', 'chosenFiles'], 'returns object');
       assert.deepStrictEqual(typeof chosen.outputDir, 'string', 'returns object');
@@ -714,6 +713,26 @@ describe('Iconz', () => {
       const report = await iconz.run().catch((e) => e.message);
 
       if (typeof report === 'object') await iconz.removeAllGeneratedImages(report, true);
+
+      assert.equal(typeof report, 'object', 'should return object');
+      assert.equal(typeof report.ico, 'object', 'should return object');
+      assert.equal(Object.values(report.ico).length, 1, 'should return one icon result');
+    });
+
+    it('generateIcons (ico) no sizes, uses defaults with actions', async () => {
+      const iconz = new Iconz({
+        input: validImagePath,
+        icons: { test: { enabled: true, type: 'ico', name: 'test', sizes: [] } },
+      });
+
+      // test writing to file
+      iconz.addAction('toFile', iconz.path().join(randomOSTempDir(), '{{width}}.png'));
+
+      const report = await iconz.run().catch((e) => e.message);
+
+      if (typeof report === 'object') {
+        await iconz.removeAllGeneratedImages(report, true);
+      }
 
       assert.equal(typeof report, 'object', 'should return object');
       assert.equal(typeof report.ico, 'object', 'should return object');

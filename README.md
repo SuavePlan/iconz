@@ -13,6 +13,7 @@ files automatically. (Now with command-line functionality).
     * [Minimal Configuration](#minimal-configuration)
     * [Custom Sizes](#custom-sizes)
     * [Using Actions](#using-actions)
+      * [Action Argument Variables](#action-argument-variables)
     * [Advanced](#advanced)
 * [Default Configuration](#default-configuration)
   * [Configuration Layout](#configuration-layout)
@@ -192,6 +193,31 @@ const iconz = new Iconz({input: 'your-image.svg'});
 iconz.addAction('blur', 3)
   .addAction('negate', true)
   .addAction('flip');
+
+(async () => {
+  /** generate your icons */
+  const report = await iconz.run();
+  /** output the report */
+  console.log(`Report: ${JSON.stringify(report, undefined, 2)}`);
+})();
+```
+
+## Action Argument Variables
+
+> The action arguments can use special variables which are parsed
+> upon the running of the action. Please see
+> [Output path generation](#output-path-generation) for the list of
+> variables available.<br /><br />Note: action arguments also
+> include a ' **last.** ' prefix e.g. **{{last.dims}}**.<br /><br />
+> variables available under last are the dimensions, meta and stats results from the previous action.
+
+```typescript
+const iconz = new Iconz({input: 'your-image.svg'});
+
+/** daisy-chain the actions to be applied to your import image */
+iconz.addAction('blur', 3)
+  .addAction('rotate', 45)
+  .addAction('resize', '{{width}}', '{{height}}');
 
 (async () => {
   /** generate your icons */
@@ -387,7 +413,6 @@ const defaultConfig: IconzConfigCollection = {
 };
 ```
 
-
 ## Configuration Layout
 
 ```typescript
@@ -493,7 +518,7 @@ const {Iconz, defaultSizes} = require("iconz");
 defaultSizes.jpeg = [30, 60, 128, '400x300'];
 ```
 
-## Icon Configuration 
+## Icon Configuration
 
 #### When adding custom icon configurations, use the interface below as a guide
 
@@ -804,11 +829,12 @@ icon-{{config.options.fit}}-{{counter}} -> icon-cover-0.png
 >```text
 > cwd (current working directory) / input folder / output folder
 >```
-> ### NOTE : The temp folder is created in the OS temp folder unless specified otherwise.
+> The temp folder is created in the OS temp folder unless specified otherwise.
 > If specified, the folder chain is as follows for the temp folder name (a child of the output folder):
 >```text
 > cwd (current working directory) / input folder / output folder / temp
 >```
+> The folder specified within the icon configuration is relative to the output folder also.
 
 > #### When specifying 'input', 'output' and 'temp' folders, please note that depending on whether they are absolute or relative can change the destination paths.
 
