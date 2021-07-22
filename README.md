@@ -206,8 +206,8 @@ iconz.addAction('blur', 3)
 
 > The action arguments can use special variables which are parsed
 > upon the running of the action. Please see
-> [Output path generation](#output-path-generation) for the list of
-> variables available.<br /><br />Note: action arguments also
+> [Handlebar Variables](#output-filename-parsing) for the list of
+> variables available.<br /><br />**Note:** action arguments also
 > include a ' **last.** ' prefix e.g. **{{last.dims}}**.<br /><br />
 > variables available under last are the dimensions, meta and stats results from the previous action.
 
