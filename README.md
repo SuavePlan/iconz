@@ -14,8 +14,10 @@ files automatically. (Now with command-line functionality).
     * [Custom Sizes](#custom-sizes)
     * [Using Actions](#using-actions)
     * [Advanced](#advanced)
-* [Configuration Layout](#configuration-layout)
-  * [Default Configuration](#default-configuration)
+* [Default Configuration](#default-configuration)
+  * [Configuration Layout](#configuration-layout)
+  * [Making Alterations](#making-alterations-to-the-default-configuration)
+  * [Fallback Sizes](#changing-default-fallback-sizes)
 * [Icon Configuration](#icon-configuration)
   * [Hooks](#how-to-use)
 * [Output Filename parsing](#output-filename-parsing)
@@ -60,6 +62,7 @@ cat my_image_path/icon.svg | iconz.js --stdin -f ./public -t ./icons/png
 ## Using a configuration file to convert the images
 
 ### Save your config to either ___.iconz.js___ (or ___.iconz.json___ ) in your project folder, then run iconz
+
 #### .iconz.js config example
 
 ```javascript
@@ -92,11 +95,9 @@ or
 iconz --config=<path_to_config>.js
 ```
 
-
-
 ## Adding it as a script to package.json
 
-```
+```json
 {
   "scripts": {
     "generate-icons": "iconz -i public/images/logo.svg -t ../icons"
@@ -106,7 +107,7 @@ iconz --config=<path_to_config>.js
 
 ### after adding .iconz.json or .iconz.js in the main project folder
 
-```
+```json
 {
   "scripts": {
     "generate-icons": "iconz"
@@ -294,86 +295,11 @@ const iconz = new Iconz({
 })();
 ```
 
-## Configuration Layout
-
-```typescript
-interface IconzConfigCollection {
-  /**
-   * This is the image you wish to use as a template
-   *
-   */
-  input?:  string | Buffer;
-  
-  /**
-   * This is the temporary holding variable for Buffer
-   * 
-   */
-  buffer?: Buffer;
-
-  /**
-   * This is the base output for all generated icons
-   *
-   * If left blank, it will use the directory of your
-   * input image
-   *
-   */
-  output?: string;
-
-  /**
-   * This is where the temporary png images are generated
-   *
-   * if left blank, it will generate a temporary output
-   * inside your operating system's temp output.
-   *
-   * If you enter a directory, it will generate the icons
-   * within that directory, and it will remain until you
-   * delete it.
-   *
-   * NOTE: images are generated as {{width}}x{{height}}.png
-   * e.g: 16x16.png , 32x32.png .... 1024x1024.png
-   *
-   */
-  temp?: string;
-
-  /**
-   * These options are based upon the sharp library parameter 'options'
-   * For Input See: https://sharp.pixelplumbing.com/api-constructor#parameters
-   * For Resizing See: https://sharp.pixelplumbing.com/api-resize#parameters
-   * For Output See: https://sharp.pixelplumbing.com/api-output#png
-   *
-   */
-  options?: IconzOptions;
-
-  /**
-   * A collection of actions to be run on original image before cloning
-   *
-   */
-  actions?: IconzImageActions;
-
-  /**
-   * This is an optional object containing the configuration
-   * for each type of icon set you wish to generate.
-   *
-   * If left blank, the defaults will be used
-   *
-   */
-  icons?: IconzIconConfig;
-}
-```
-
 ## Default Configuration
 
 ### This is the default configuration to generate icons
 
 ```typescript
-
-/** these are the fallback sizes when a size isn't specified in the configuration */
-const defaultSizes: Record<string, (string | number)[]> = {
-  ico: [16, 24, 32, 48, 64, 128, 256],
-  icns: [16, 32, 64, 128, 256, 512, 1024],
-  png: [16, 32, 64, 128, 256, 512, 1024],
-  jpeg: [16, 32, 64, 128, 256, 512, 1024],
-};
 
 /** this is the main default configuration */
 const defaultConfig: IconzConfigCollection = {
@@ -459,12 +385,117 @@ const defaultConfig: IconzConfigCollection = {
     },
   },
 };
-
 ```
 
-## Icon Configuration
 
-###                      
+## Configuration Layout
+
+```typescript
+interface IconzConfigCollection {
+  /**
+   * This is the image you wish to use as a template
+   *
+   */
+  input?: string | Buffer;
+
+  /**
+   * This is the temporary holding variable for Buffer
+   *
+   */
+  buffer?: Buffer;
+
+  /**
+   * This is the base output for all generated icons
+   *
+   * If left blank, it will use the directory of your
+   * input image
+   *
+   */
+  output?: string;
+
+  /**
+   * This is where the temporary png images are generated
+   *
+   * if left blank, it will generate a temporary output
+   * inside your operating system's temp output.
+   *
+   * If you enter a directory, it will generate the icons
+   * within that directory, and it will remain until you
+   * delete it.
+   *
+   * NOTE: images are generated as {{width}}x{{height}}.png
+   * e.g: 16x16.png , 32x32.png .... 1024x1024.png
+   *
+   */
+  temp?: string;
+
+  /**
+   * These options are based upon the sharp library parameter 'options'
+   * For Input See: https://sharp.pixelplumbing.com/api-constructor#parameters
+   * For Resizing See: https://sharp.pixelplumbing.com/api-resize#parameters
+   * For Output See: https://sharp.pixelplumbing.com/api-output#png
+   *
+   */
+  options?: IconzOptions;
+
+  /**
+   * A collection of actions to be run on original image before cloning
+   *
+   */
+  actions?: IconzImageActions;
+
+  /**
+   * This is an optional object containing the configuration
+   * for each type of icon set you wish to generate.
+   *
+   * If left blank, the defaults will be used
+   *
+   */
+  icons?: IconzIconConfig;
+}
+```
+
+## Making alterations to the default configuration
+
+### Import the defaultConfig and modify as required
+
+```javascript
+const {Iconz, defaultConfig} = require("iconz");
+
+// remove ms tile icons
+delete defaultConfig.icons.msTile;
+
+// change the folder of the android icons
+defaultConfig.icons.android.folder = 'android-icons';
+
+// override the apple touch sizes
+defaultConfig.icons.appleTouch.sizes = [96, 114, 120, 144, 152, 167, 180];
+```
+
+## Changing default fallback sizes
+
+```typescript
+
+/** these are the fallback sizes for when sizes aren't specified within the configuration */
+const defaultSizes: Record<string, (string | number)[]> = {
+  ico: [16, 24, 32, 48, 64, 128, 256],
+  icns: [16, 32, 64, 128, 256, 512, 1024],
+  png: [16, 32, 64, 128, 256, 512, 1024],
+  jpeg: [16, 32, 64, 128, 256, 512, 1024],
+};
+```
+
+### Import the defaultSizes and modify as required
+
+```javascript
+const {Iconz, defaultSizes} = require("iconz");
+
+defaultSizes.jpeg = [30, 60, 128, '400x300'];
+```
+
+## Icon Configuration 
+
+#### When adding custom icon configurations, use the interface below as a guide
 
 ```typescript
 

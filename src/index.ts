@@ -1002,13 +1002,11 @@ class Iconz {
           }
 
           /** get stats for directory */
-          const stats = await stat(directory)
-            .then((s) => s)
-            .catch(() => undefined);
+          const stats = await stat(directory).catch(() => undefined);
 
           /**  make directory for icon if it doesn't exist */
           if (!stats || !stats.isDirectory()) {
-            if (undefined === (await mkdir(directory, { recursive: true }))) {
+            if (undefined === (await mkdir(directory, { recursive: true }).catch(() => undefined))) {
               throw new Error('Directory does not exist');
             }
           }
@@ -1286,9 +1284,7 @@ class Iconz {
             throw new Error(`invalid absolute path ${file}`);
           }
 
-          const stats = await stat(file)
-            .then((s) => s)
-            .catch(() => undefined);
+          const stats = await stat(file).catch(() => undefined);
 
           if (stats && stats.isFile(file)) {
             /** attempt to remove file */
@@ -1786,9 +1782,7 @@ class Iconz {
             const parentDirectory = this.path().dirname(fileDirectory);
             let newFile = this.path().join(parentDirectory, filename);
 
-            const stats = await stat(newFile)
-              .then((s) => s)
-              .catch(() => undefined);
+            const stats = await stat(newFile).catch(() => undefined);
 
             try {
               /** if there is a duplicate named file, just prefix with previous hash */
