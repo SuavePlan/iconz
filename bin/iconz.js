@@ -98,7 +98,7 @@ function readStdin() {
 
       // get config paths
       const configPaths = keys.includes('config')
-        ? [Iconz.path().isAbsolute(argv.config) ? argv.config : `${dir}${argv.config}`]
+        ? [Iconz.path().isAbsolute(argv.config) ? argv.config : `${configPrefix}${argv.config}`]
         : [`${configPrefix}.iconz.js`, `${configPrefix}.iconz.json`];
 
       // loop through paths to find config

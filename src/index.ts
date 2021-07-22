@@ -1030,10 +1030,17 @@ class Iconz {
     return new Promise((resolve, reject) => {
       (async () => {
         try {
+          /** sharp doesn't read ico files. check buffer, then send to icoToPng first if ico file */
+          const isIconBuffer =
+            this._buffer &&
+            new Uint8Array(this._buffer.buffer.slice(0, 4)).toString() === new Uint8Array([0, 0, 1, 0]).toString();
+
           /**  read input image */
           let img = sharp(
             /** if it's an icon, use icoToPng to convert into a buffer before passing to sharp */
-            this._buffer
+            isIconBuffer
+              ? await icoToPng(this._buffer, 1024)
+              : this._buffer
               ? this._buffer
               : this.path().extname(this._config.input) === '.ico'
               ? await icoToPng(await readFile(this._config.input), 1024)

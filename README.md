@@ -59,21 +59,14 @@ cat my_image_path/icon.svg | iconz.js --stdin -f ./public -t ./icons/png
 
 ## Using a configuration file to convert the images
 
-```shell
-iconz --config=<path_to_config>.json
-```
-
-### You can also run iconz without parameters.
-
-### save config to a file called ___.iconz.js___ (or ___.iconz.json___ ) to the base of your project folder
-
+### Save your config to either ___.iconz.js___ (or ___.iconz.json___ ) in your project folder, then run iconz
 #### .iconz.js config example
 
 ```javascript
 module.exports = {
   input: 'public/images/logo.svg',
-  output: 'public',
-  temp: 'icons',
+  output: '..', // output is relative to input folder (output = public folder)
+  temp: '../images/png-icons', // temp directory is relative to output folder (temp = public/images/png-icons folder)
 };
 ```
 
@@ -82,10 +75,24 @@ module.exports = {
 ```json
 {
   "input": "public/images/logo.svg",
-  "output": "public",
-  "temp": "icons"
+  "output": "..",
+  "temp": "../images/png-icons"
 }
 ```
+
+### to specify an alternative config location
+
+```shell
+iconz --config=<path_to_config>.json
+```
+
+or
+
+```shell
+iconz --config=<path_to_config>.js
+```
+
+
 
 ## Adding it as a script to package.json
 
