@@ -369,6 +369,7 @@ describe('Iconz', () => {
 
       const chosen = await iconz.getChosenFilesForIcon(configWithoutFolder, report);
 
+
       assert(typeof chosen === 'object', 'should return object');
       assert.deepStrictEqual(Object.keys(chosen), ['outputDir', 'chosenFiles'], 'returns object');
       assert.deepStrictEqual(typeof chosen.outputDir, 'string', 'returns object');

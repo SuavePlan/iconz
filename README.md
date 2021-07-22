@@ -72,8 +72,8 @@ iconz --config=<path_to_config>.json
 ```javascript
 module.exports = {
   input: 'public/images/logo.svg',
-  folder: 'public',
-  tmpFolder: 'icons',
+  output: 'public',
+  temp: 'icons',
 };
 ```
 
@@ -82,8 +82,8 @@ module.exports = {
 ```json
 {
   "input": "public/images/logo.svg",
-  "folder": "public",
-  "tmpFolder": "icons"
+  "output": "public",
+  "temp": "icons"
 }
 ```
 
@@ -93,6 +93,16 @@ module.exports = {
 {
   "scripts": {
     "generate-icons": "iconz -i public/images/logo.svg -t ../icons"
+  }
+}
+```
+
+### after adding .iconz.json or .iconz.js in the main project folder
+
+```
+{
+  "scripts": {
+    "generate-icons": "iconz"
   }
 }
 ```
@@ -137,19 +147,19 @@ const myIcons = {
     type: 'ico',
     name: 'app',
     sizes: [16, 24, 32, 48, 64, 128, 256],
-    folder: '.',
+    output: '.',
   },
   appIcns: {
     type: 'icns',
     name: 'app',
     sizes: [16, 32, 64, 128, 256, 512, 1024],
-    folder: '.',
+    output: '.',
   },
   androidIcons: {
     type: 'png',
     name: 'android-chrome-{{dims}}',
     sizes: [36, 48, 72, 96, 144, 192, 256, 384, 512],
-    folder: 'icons',
+    output: 'icons',
   }
 }
 
@@ -191,8 +201,8 @@ iconz.addAction('blur', 3)
 const iconz = new Iconz({
   input: validImagePath,
   /** use temporary folder for testing purposes */
-  folder: folder,
-  tmpFolder: folder,
+  output: 'your_output_folder', // optional
+  temp: 'temporary_folder', // optional
   icons: {
     rgb: {
       type: 'png',
@@ -211,7 +221,7 @@ const iconz = new Iconz({
             (async () => {
               try {
                 /** get folder for output */
-                const dir = self.getConfig().folder;
+                const dir = self.getConfig().output;
 
                 /** colourSpaces to test */
                 const colourSpace = {
@@ -644,7 +654,7 @@ Configuration of the current image being created
 {{config.type}} - Type of icon being generated (png, ico, icns or jpeg)
 {{config.name}} - The unparsed name of the file e.g. icon-{{size}}
 {{config.sizes.0}} - First image in sizes
-{{config.folder}} - Folder specified as output folder
+{{config.output}} - Folder specified as output folder
 ```
 
 (See: [Sharp Image Processor Resize Options](https://sharp.pixelplumbing.com/api-resize#metadata))

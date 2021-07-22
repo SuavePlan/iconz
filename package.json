@@ -1,6 +1,6 @@
 {
   "name": "iconz",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Icon Generator for the Web",
   "main": "dist/index.js",
   "bin": {

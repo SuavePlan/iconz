@@ -1058,8 +1058,11 @@ class Iconz {
           }
 
           /** attempt to use temp from config, else create one in OS temp output */
-          const tempPath =
-            this._config.temp || this.path().join(os.tmpdir(), `Iconz-${crypto.randomBytes(4).toString('hex')}`);
+          const tempPath = this._config.temp
+            ? this.isAbsolutePath(this._config.temp)
+              ? this._config.temp
+              : this.path().join(this._config.output, this._config.temp)
+            : this.path().join(os.tmpdir(), `Iconz-${crypto.randomBytes(4).toString('hex')}`);
 
           /**  create temporary output if needed */
           const tempFolder = this.fullPath(tempPath, undefined, tempPath.indexOf(os.tmpdir()) !== 0);
@@ -1458,7 +1461,9 @@ class Iconz {
 
           /**  output directory */
           const outputDir = this.fullPath(
-            config.folder || this._config.output,
+            this.isAbsolutePath(config.folder || '.')
+              ? config.folder
+              : this.path().join(this._config.output, config.folder || '.'),
             this.isAbsolutePath(this._config.input) ? this.path().dirname(this._config.input) : undefined,
           );
 
