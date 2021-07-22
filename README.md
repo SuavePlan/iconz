@@ -154,19 +154,19 @@ const myIcons = {
     type: 'ico',
     name: 'app',
     sizes: [16, 24, 32, 48, 64, 128, 256],
-    output: '.',
+    folder: '.',
   },
   appIcns: {
     type: 'icns',
     name: 'app',
     sizes: [16, 32, 64, 128, 256, 512, 1024],
-    output: '.',
+    folder: '.',
   },
   androidIcons: {
     type: 'png',
     name: 'android-chrome-{{dims}}',
     sizes: [36, 48, 72, 96, 144, 192, 256, 384, 512],
-    output: 'icons',
+    folder: 'icons',
   }
 }
 
@@ -410,37 +410,37 @@ const defaultConfig: IconzConfigCollection = {
       type: 'icns',
       name: 'app',
       sizes: [16, 32, 64, 128, 256, 512, 1024],
-      output: '.',
+      folder: '.',
     },
     ico: {
       type: 'ico',
       name: 'app',
       sizes: [16, 24, 32, 48, 64, 128, 256],
-      output: '.',
+      folder: '.',
     },
     favico: {
       type: 'ico',
       name: 'favicon',
       sizes: [16, 24, 32, 48, 64],
-      output: '.',
+      folder: '.',
     },
     faviconPng: {
       type: 'png',
       name: 'favicon',
       sizes: [32],
-      output: '.',
+      folder: '.',
     },
     favicon: {
       type: 'png',
       name: 'favicon-{{dims}}',
       sizes: [32, 57, 72, 96, 120, 128, 144, 152, 195, 228],
-      output: 'icons',
+      folder: 'icons',
     },
     msTile: {
       type: 'png',
       name: 'mstile-{{dims}}',
       sizes: [70, 144, 150, 270, 310, '310x150'],
-      output: 'icons',
+      folder: 'icons',
       options: {
         background: {r: 0, g: 0, b: 0, alpha: 1},
       },
@@ -449,13 +449,13 @@ const defaultConfig: IconzConfigCollection = {
       type: 'png',
       name: 'android-chrome-{{dims}}',
       sizes: [36, 48, 72, 96, 144, 192, 256, 384, 512],
-      output: 'icons',
+      folder: 'icons',
     },
     appleTouch: {
       type: 'png',
       name: 'apple-touch-{{dims}}',
       sizes: [16, 32, 76, 96, 114, 120, 144, 152, 167, 180],
-      output: 'icons',
+      folder: 'icons',
     },
   },
 };
@@ -521,14 +521,14 @@ export interface IconzConfig {
   sizes: (string | number)[];
 
   /**
-   * This is the output you wish to store the images
+   * This is the folder you wish to store the images
    * generated from this configuration.
    *
    * If left blank, it will use the default output
    * from the main configuration.
    *
    */
-  output?: string;
+  folder?: string;
 
   /**
    * These resizing options are ones from the sharp library,
