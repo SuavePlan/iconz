@@ -1,855 +1,771 @@
-# Iconz - Icon Generator for the Web
+# Iconz 2.0 - Modern Icon Generator
 
-Convert a single image (.jpg, .png, .webp, .avif, .gif, .svg, .tiff), icon (.ico) or apple icon (.icns) into various
-sized png, ico and icns files automatically. (Now with command-line functionality).
+> 🎨 Generate icons for iOS, Android, PWA, Windows, and macOS from a single source image
 
-* [Installation](#installation)
-* [How to Use](#how-to-use)
-  * [Command Line](#command-line)
-    * [Piping source image](#piping-an-input-image-into-iconz-for-icon-generation)
-    * [Configuration File](#using-a-configuration-file-to-convert-the-images)
-  * [Script with package.json](#adding-it-as-a-script-to-packagejson)
-  * [NodeJS Setup](#nodejs-setup)
-    * [Minimal Configuration](#minimal-configuration)
-    * [Custom Sizes](#custom-sizes)
-    * [Using Actions](#using-actions)
-      * [Action Argument Variables](#action-argument-variables)
-    * [Advanced](#advanced)
-* [Default Configuration](#default-configuration)
-  * [Configuration Layout](#configuration-layout)
-  * [Making Alterations](#making-alterations-to-the-default-configuration)
-  * [Fallback Sizes](#changing-default-fallback-sizes)
-* [Icon Configuration](#icon-configuration)
-  * [Hooks](#how-to-use)
-* [Output Filename parsing](#output-filename-parsing)
-  * [Filename examples](#filename-examples)
+[![npm version](https://img.shields.io/npm/v/iconz.svg)](https://www.npmjs.com/package/iconz)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-# Installation
+## ✨ Features
 
-### Install globally to use Iconz on the command line, as an npm script as well as a node module
+- 🚀 **Modern Stack** - Built with Bun, TypeScript, and Sharp
+- 📱 **All Platforms** - iOS, Android, PWA, Windows, macOS, Electron, Browser Extensions
+- 🎯 **2024-2025 Specs** - Latest icon requirements for all platforms
+- 🔄 **Batch Processing** - Generate icons from multiple sources in parallel
+- 🎨 **SVG Support** - Enhanced SVG generation with optimization options
+- 🔧 **Fully Modular** - Clean architecture with <250 lines per file
+- 🎨 **Fully Extensible** - Add custom formats, presets, plugins with TypeScript declaration merging
+- ⚡ **Blazing Fast** - Powered by Bun and Sharp
+- 🔌 **Plugin System** - Built-in optimization/compression plugins
+- 📦 **Zero Config** - Auto-detect config files and project type
+- 🎁 **Simplified API** - `quick` helpers and fluent config builder
+- 🗜️ **Image Optimization** - Built-in compression plugins (30-50% smaller files)
 
-Node Package Manager (NPM)
+## 📦 Installation
 
-```shell
+```bash
+# With npm
+npm install iconz
+
+# With Bun (recommended)
+bun add iconz
+
+# Global CLI
 npm install -g iconz
 ```
 
-Yarn
+## 🚀 Quick Start
 
-```shell
-yarn global add iconz
+### Automatic Configuration
+
+Just run `iconz` to auto-detect your config file:
+
+```bash
+# Create .iconz.ts
+echo 'import { quick } from "iconz"; export default quick.pwa("./logo.svg");' > .iconz.ts
+
+# Generate icons automatically
+iconz
 ```
 
-# How to Use
+### CLI
 
-## Command Line
+```bash
+# Auto-detect config file (.iconz.{ts,js,json})
+iconz
 
-```shell
-iconz --help                                              Gives help on how to use command
-iconz -i my-image.png                                     Generates default icon set in same folder as input file
-iconz -i my-image.png -t ./icons                          Generates all the default icons, also keeps the temporary pngs in icons folder 
-                                                            (relative to my image.jpg) formatted WxH.png (e.g 32x32.png)
-iconz -i my-image.png --ico=favicon                       Generates an ico file called favicon.ico using the default sizes
-iconz -i my-image.png --icns=app                          Generates an icns icon file called icon.icns using the default sizes                                          
-iconz -i my-image.png -f ./thumbs --jpeg={{dims}},32,64   Generates thumbnail icons 32x32.jpg and 64x64.jpg inside 'thumbs' folder                                           
+# Generate PWA icons
+iconz -i logo.svg -o ./public -p pwa
+
+# Generate icons for all platforms
+iconz -i logo.svg -p ios,android,pwa,windows,macos
+
+# Use specific config file
+iconz -c ./.iconz.js
 ```
 
-## Piping an input image into iconz for icon generation
-
-```shell
-cat my_image_path/icon.svg | iconz.js --stdin -f ./public -t ./icons/png
-```
-
-## Using a configuration file to convert the images
-
-### Save your config to either ___.iconz.js___ (or ___.iconz.json___ ) in your project folder, then run iconz
-
-#### .iconz.js config example
-
-```javascript
-module.exports = {
-  input: 'public/images/logo.svg',
-  output: '..', // output is relative to input folder (output = public folder)
-  temp: '../images/png-icons', // temp directory is relative to output folder (temp = public/images/png-icons folder)
-};
-```
-
-#### .iconz.json config example
-
-```json
-{
-  "input": "public/images/logo.svg",
-  "output": "..",
-  "temp": "../images/png-icons"
-}
-```
-
-### to specify an alternative config location
-
-```shell
-iconz --config=<path_to_config>.json
-```
-
-or
-
-```shell
-iconz --config=<path_to_config>.js
-```
-
-## Adding it as a script to package.json
-
-```json
-{
-  "scripts": {
-    "generate-icons": "iconz -i public/images/logo.svg -t ../icons"
-  }
-}
-```
-
-### after adding .iconz.json or .iconz.js in the main project folder
-
-```json
-{
-  "scripts": {
-    "generate-icons": "iconz"
-  }
-}
-```
-
-## NodeJS Setup
-
-## Minimal Configuration
-
-### import of class
+### Simplified API (Recommended)
 
 ```typescript
-import {Iconz} from 'iconz';
+import { quick } from 'iconz';
+
+// One-liner for PWA
+const config = quick.pwa('./logo.svg', './public');
+
+// Auto-detect project type
+const config = quick.auto('./logo.svg');
+
+// All platforms
+const config = quick.all('./logo.svg');
+
+// Generate
+import { createIconz } from 'iconz';
+const iconz = createIconz(config);
+await iconz.generate();
 ```
 
-or
+### Config Builder API
 
 ```typescript
-const {Iconz} = require('iconz');
+import { createConfig } from 'iconz';
+
+const config = createConfig('./logo.svg')
+  .to('./public')
+  .use('pwa', 'ios')
+  .highQuality()
+  .build();
+
+// With auto-detection
+const config = createConfig('./logo.svg')
+  .autoDetect()
+  .balanced()
+  .build();
 ```
 
-### generates pre-determined default icon set
+### Typed Platform Configs
 
-```javascript
-/** Instantiate a new Iconz class */
-const iconz = new Iconz({input: 'your-image.svg'});
-
-(async () => {
-  /** generate your icons */
-  const report = await iconz.run();
-  /** output the report */
-  console.log(`Report: ${JSON.stringify(report, undefined, 2)}`);
-})();
-```
-
-## Custom Sizes
-
-### Using custom sizes instead of defaults
-
-```javascript
-const myIcons = {
-  appIco: {
-    type: 'ico',
-    name: 'app',
-    sizes: [16, 24, 32, 48, 64, 128, 256],
-    folder: '.',
-  },
-  appIcns: {
-    type: 'icns',
-    name: 'app',
-    sizes: [16, 32, 64, 128, 256, 512, 1024],
-    folder: '.',
-  },
-  androidIcons: {
-    type: 'png',
-    name: 'android-chrome-{{dims}}',
-    sizes: [36, 48, 72, 96, 144, 192, 256, 384, 512],
-    folder: 'icons',
-  }
-}
-
-const iconz = new Iconz({input: 'your-image.svg', icons: myIcons});
-
-(async () => {
-  /** generate your icons */
-  const report = await iconz.run();
-  /** output the report */
-  console.log(`Report: ${JSON.stringify(report, undefined, 2)}`);
-})();
-```
-
-## Using Actions
-
-### See https://sharp.pixelplumbing.com/api-operation for more actions
-
-```javascript
-const iconz = new Iconz({input: 'your-image.svg'});
-
-/** daisy-chain the actions to be applied to your import image */
-iconz.addAction('blur', 3)
-  .addAction('negate', true)
-  .addAction('flip');
-
-(async () => {
-  /** generate your icons */
-  const report = await iconz.run();
-  /** output the report */
-  console.log(`Report: ${JSON.stringify(report, undefined, 2)}`);
-})();
-```
-
-## Action Argument Variables
-
-> The action arguments can use special variables which are parsed
-> upon the running of the action. Please see
-> [Handlebar Variables](#output-filename-parsing) for the list of
-> variables available.<br /><br />**Note:** action arguments also
-> include a ' **last.** ' prefix e.g. **{{last.dims}}**.<br /><br />
-> variables available under last are the dimensions, meta and stats results from the previous action.
+Get full TypeScript IntelliSense and validation for platform-specific configs:
 
 ```typescript
-const iconz = new Iconz({input: 'your-image.svg'});
+import { createIconz, type IconzConfig } from 'iconz';
 
-/** daisy-chain the actions to be applied to your import image */
-iconz.addAction('blur', 3)
-  .addAction('rotate', 45)
-  .addAction('resize', '{{width}}', '{{height}}');
-
-(async () => {
-  /** generate your icons */
-  const report = await iconz.run();
-  /** output the report */
-  console.log(`Report: ${JSON.stringify(report, undefined, 2)}`);
-})();
-```
-
-## Advanced
-
-### Generating multiple colourSpace jpg files alongside png icons
-
-```javascript
-const iconz = new Iconz({
-  input: validImagePath,
-  /** use temporary folder for testing purposes */
-  output: 'your_output_folder', // optional
-  temp: 'temporary_folder', // optional
+// PWA config with type safety
+const config: IconzConfig.PWA = {
+  input: './logo.svg',
+  output: './public',
   icons: {
-    rgb: {
-      type: 'png',
-      name: 'rgb-{{dims}}',
-      sizes: [128, 256, 512, 1024],
-      hooks: {
-        /** apply hook before resize */
-        postResize: (
-          self,
-          image,
-          options,
-          targetFilename,
-          imageReport
-        ) => {
-          return new Promise((resolve, reject) => {
-            (async () => {
-              try {
-                /** get folder for output */
-                const dir = self.getConfig().output;
+    standard: { type: 'png', name: 'icon-{{dims}}', sizes: [192, 512] },
+    maskable: { type: 'png', name: 'maskable-{{dims}}', sizes: [192, 512] },
+    favicon: { type: 'ico', name: 'favicon', sizes: [16, 32, 48] }
+    // TypeScript will show you valid icon names!
+  }
+};
 
-                /** colourSpaces to test */
-                const colourSpace = {
-                  cmyk: [],
-                  'b-w': [],
-                  srgb: [],
-                  hsv: [],
-                  lab: [],
-                  xyz: [],
-                };
+// Other platform types:
+// IconzConfig.iOS, IconzConfig.Android,
+// IconzConfig.Windows, IconzConfig.MacOS
+```
 
-                /** loop through each colourSpace type and create images */
-                for (const type of Object.keys(colourSpace)) {
-                  /** new filename with dimensions */
-                  const filename = `${type}-${options.width}x${options.height}.jpg`;
+### Traditional API
 
-                  /** directory based upon colourSpace type */
-                  const dirname = iconz.path().join(dir, type);
+```typescript
+import { createIconz } from 'iconz';
+import { pwaPreset } from 'iconz/presets';
 
-                  /** set target path */
-                  const target = iconz.path().join(dirname, filename);
-
-                  /** prepare image */
-                  await image
-                    .clone() /** image is cloned to ensure original is left untouched */
-                    .toColorspace(type)
-                    .jpeg({
-                      chromaSubsampling: '4:4:4', quality: 100
-                    })
-                    .toBuffer()
-                    .then((data) => {
-                      /** make directory */
-                      fs.mkdirSync(dirname, {recursive: true});
-                      /** write image */
-                      fs.writeFileSync(target, data);
-                      /** generate report results */
-                      imageReport.jpg ??= colourSpace;
-                      imageReport.jpg[type].push(target);
-                    })
-                    .catch(() => {
-                      /** if image failed, add it to the report */
-                      imageReport.failed[target] = `${type} jpeg failed`;
-                    });
-                }
-                /** promise resolves image */
-                resolve(image);
-              } catch (error) {
-                /** promise rejects error */
-                reject(error);
-              }
-            })();
-          });
-        },
-      },
-    },
-  },
+const iconz = createIconz({
+  input: './logo.svg',
+  output: './public',
+  ...pwaPreset
 });
 
-(async () => {
-  /** generate report */
-  const report = await iconz.run().catch((e) => e.message);
-  console.log(`Report: ${JSON.stringify(report, undefined, 2)}`);
-})();
+const report = await iconz.generate();
+console.log(`Generated ${report.stats.success} icons!`);
 ```
 
-## Default Configuration
+## 🎯 Platform Support
 
-### This is the default configuration to generate icons
+### 📱 Mobile
+
+#### iOS (2024-2025)
+- App Store (1024x1024)
+- iPhone icons (180x180, 120x120, etc.)
+- iPad icons (167x167, 152x152, etc.)
+- Supports new "liquid glass" effect
 
 ```typescript
+import { iosPreset } from 'iconz/presets';
+```
 
-/** this is the main default configuration */
-const defaultConfig: IconzConfigCollection = {
-  options: {
-    input: <IconzInputOptions>{
-      density: 150,
-    },
-    resize: <IconzResizeOptions>{
-      fit: 'contain',
-      background: {r: 0, g: 0, b: 0, alpha: 0},
-      kernel: 'mitchell',
-      position: 'centre',
-      withoutEnlargement: false,
-      fastShrinkOnLoad: true,
-      width: 1024,
-      height: 1024,
-    },
-    output: <IconzOutputOptions>{
-      formats: <IconzOutputFormats>{
-        png: {
-          compressionLevel: 9,
-          quality: 100,
-        },
-        jpeg: {
-          quality: 100,
-          chromaSubsampling: '4:4:4',
-        },
-      },
-      format: 'png',
-    },
-  },
+#### Android (2024-2025)
+- Play Store (512x512)
+- Adaptive icons with safe zone
+- All density buckets (mdpi through xxxhdpi)
+- Monochrome icon support
+
+```typescript
+import { androidPreset } from 'iconz/presets';
+```
+
+### 🌐 Web
+
+#### PWA (Progressive Web Apps)
+- Manifest icons (192x192, 512x512)
+- Maskable icons with 40% safe zone
+- Favicons (ICO format)
+- Apple touch icons
+
+```typescript
+import { pwaCompletePreset } from 'iconz/presets';
+```
+
+### 💻 Desktop
+
+#### Windows 11
+- ICO files with multiple sizes
+- Fluent Design compatible
+- High-DPI support (256x256)
+- Tile icons
+
+```typescript
+import { windows11Preset } from 'iconz/presets';
+```
+
+#### macOS
+- ICNS files with Retina support
+- macOS 11+ optimized
+- Asset catalog format
+- Document icons
+
+```typescript
+import { macosPreset } from 'iconz/presets';
+```
+
+#### Electron
+- Complete cross-platform desktop app icons
+- Windows ICO, macOS ICNS, Linux PNG
+- Electron Builder and Electron Forge support
+- All required sizes for packaging
+
+```typescript
+import { electronPreset, electronBuilderPreset, electronForgePreset } from 'iconz/presets';
+```
+
+### 🔌 Browser Extensions
+
+#### Chrome/Edge Extensions
+- Manifest V3 compliant
+- All required icon sizes (16, 32, 48, 128)
+- Action icons and Web Store assets
+- Universal browser extension support
+
+```typescript
+import {
+  chromeExtensionPreset,
+  edgeExtensionPreset,
+  firefoxExtensionPreset,
+  universalExtensionPreset
+} from 'iconz/presets';
+```
+
+## 📝 Configuration
+
+### Using Presets
+
+```typescript
+import { createIconz } from 'iconz';
+import { pwaCompletePreset, iosPreset } from 'iconz/presets';
+
+const iconz = createIconz({
+  input: './logo.svg',
+  output: './icons',
   icons: {
-    icns: {
-      type: 'icns',
-      name: 'app',
-      sizes: [16, 32, 64, 128, 256, 512, 1024],
-      folder: '.',
-    },
-    ico: {
-      type: 'ico',
-      name: 'app',
-      sizes: [16, 24, 32, 48, 64, 128, 256],
-      folder: '.',
-    },
-    favico: {
-      type: 'ico',
-      name: 'favicon',
-      sizes: [16, 24, 32, 48, 64],
-      folder: '.',
-    },
-    faviconPng: {
+    ...pwaCompletePreset.icons,
+    ...iosPreset.icons
+  }
+});
+```
+
+### Custom Configuration
+
+```typescript
+const iconz = createIconz({
+  input: './logo.svg',
+  output: './icons',
+  icons: {
+    pwaIcons: {
       type: 'png',
-      name: 'favicon',
-      sizes: [32],
-      folder: '.',
+      name: 'icon-{{dims}}',
+      sizes: [192, 512],
+      folder: 'pwa'
     },
     favicon: {
-      type: 'png',
-      name: 'favicon-{{dims}}',
-      sizes: [32, 57, 72, 96, 120, 128, 144, 152, 195, 228],
-      folder: 'icons',
+      type: 'ico',
+      name: 'favicon',
+      sizes: [16, 32, 48]
     },
-    msTile: {
-      type: 'png',
-      name: 'mstile-{{dims}}',
-      sizes: [70, 144, 150, 270, 310, '310x150'],
-      folder: 'icons',
-      options: {
-        background: {r: 0, g: 0, b: 0, alpha: 1},
-      },
-    },
-    android: {
-      type: 'png',
-      name: 'android-chrome-{{dims}}',
-      sizes: [36, 48, 72, 96, 144, 192, 256, 384, 512],
-      folder: 'icons',
-    },
-    appleTouch: {
-      type: 'png',
-      name: 'apple-touch-{{dims}}',
-      sizes: [16, 32, 76, 96, 114, 120, 144, 152, 167, 180],
-      folder: 'icons',
-    },
+    appIcon: {
+      type: 'icns',
+      name: 'AppIcon',
+      sizes: [16, 32, 64, 128, 256, 512, 1024]
+    }
   },
+  options: {
+    quality: 95,
+    resize: {
+      fit: 'contain',
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+      kernel: 'lanczos3'
+    }
+  }
+});
+```
+
+### Config Files
+
+Iconz automatically detects config files in your project root:
+
+**Supported files (in order of precedence):**
+- `.iconz.ts` (TypeScript, recommended)
+- `.iconz.js` (JavaScript)
+- `.iconz.mjs` (ESM)
+- `.iconz.json` (JSON)
+- `.iconzrc.json` (JSON, legacy)
+- `.iconzrc` (JSON, legacy)
+
+#### TypeScript Config (Recommended)
+
+Create `.iconz.ts`:
+
+```typescript
+import { quick } from 'iconz';
+
+// Simple one-liner
+export default quick.pwa('./logo.svg', './public');
+```
+
+Or with the config builder:
+
+```typescript
+import { createConfig, aggressiveOptimization } from 'iconz';
+
+export default createConfig('./logo.svg')
+  .to('./public')
+  .use('pwa', 'ios')
+  .highQuality()
+  .build();
+```
+
+#### JavaScript Config
+
+Create `.iconz.js`:
+
+```javascript
+import { quick, aggressiveOptimization } from 'iconz';
+
+export default {
+  ...quick.pwa('./logo.svg', './public'),
+  plugins: [aggressiveOptimization]
 };
 ```
 
-## Configuration Layout
+#### JSON Config
 
-```typescript
-interface IconzConfigCollection {
-  /**
-   * This is the image you wish to use as a template
-   *
-   */
-  input?: string | Buffer;
+Create `.iconz.json`:
 
-  /**
-   * This is the temporary holding variable for Buffer
-   *
-   */
-  buffer?: Buffer;
-
-  /**
-   * This is the base output for all generated icons
-   *
-   * If left blank, it will use the directory of your
-   * input image
-   *
-   */
-  output?: string;
-
-  /**
-   * This is where the temporary png images are generated
-   *
-   * if left blank, it will generate a temporary output
-   * inside your operating system's temp output.
-   *
-   * If you enter a directory, it will generate the icons
-   * within that directory, and it will remain until you
-   * delete it.
-   *
-   * NOTE: images are generated as {{width}}x{{height}}.png
-   * e.g: 16x16.png , 32x32.png .... 1024x1024.png
-   *
-   */
-  temp?: string;
-
-  /**
-   * These options are based upon the sharp library parameter 'options'
-   * For Input See: https://sharp.pixelplumbing.com/api-constructor#parameters
-   * For Resizing See: https://sharp.pixelplumbing.com/api-resize#parameters
-   * For Output See: https://sharp.pixelplumbing.com/api-output#png
-   *
-   */
-  options?: IconzOptions;
-
-  /**
-   * A collection of actions to be run on original image before cloning
-   *
-   */
-  actions?: IconzImageActions;
-
-  /**
-   * This is an optional object containing the configuration
-   * for each type of icon set you wish to generate.
-   *
-   * If left blank, the defaults will be used
-   *
-   */
-  icons?: IconzIconConfig;
+```json
+{
+  "input": "./logo.svg",
+  "output": "./public",
+  "icons": {
+    "pwaIcons": {
+      "type": "png",
+      "name": "icon-{{dims}}",
+      "sizes": [192, 512]
+    },
+    "favicon": {
+      "type": "ico",
+      "name": "favicon",
+      "sizes": [16, 32, 48]
+    }
+  }
 }
 ```
 
-## Making alterations to the default configuration
+#### Auto-Generation
 
-### Import the defaultConfig and modify as required
+Once you have a config file, just run:
 
-```javascript
-const {Iconz, defaultConfig} = require("iconz");
+```bash
+# Auto-detects and uses your config
+iconz
 
-// remove ms tile icons
-delete defaultConfig.icons.msTile;
-
-// change the folder of the android icons
-defaultConfig.icons.android.folder = 'android-icons';
-
-// override the apple touch sizes
-defaultConfig.icons.appleTouch.sizes = [96, 114, 120, 144, 152, 167, 180];
+# Or specify a config file
+iconz -c ./.iconz.js
 ```
 
-## Changing default fallback sizes
+## 🚀 Batch Processing
+
+Process multiple icon sources in parallel for maximum performance:
 
 ```typescript
+import { processBatch, quick } from 'iconz';
 
-/** these are the fallback sizes for when sizes aren't specified within the configuration */
-const defaultSizes: Record<string, (string | number)[]> = {
-  ico: [16, 24, 32, 48, 64, 128, 256],
-  icns: [16, 32, 64, 128, 256, 512, 1024],
-  png: [16, 32, 64, 128, 256, 512, 1024],
-  jpeg: [16, 32, 64, 128, 256, 512, 1024],
+// Process multiple sources at once
+const result = await processBatch({
+  sources: [
+    quick.pwa('./logo-light.svg', './public/light'),
+    quick.pwa('./logo-dark.svg', './public/dark'),
+    quick.ios('./app-icon.svg', './assets'),
+  ],
+  parallel: true,      // Run in parallel (default)
+  concurrency: 4       // Max concurrent operations
+});
+
+console.log(`Generated ${result.stats.totalIcons} icons from ${result.stats.totalSources} sources`);
+```
+
+### Batch Same Config
+
+Process multiple inputs with the same configuration:
+
+```typescript
+import { processSameSources } from 'iconz';
+
+const result = await processSameSources({
+  inputs: ['./logo-light.svg', './logo-dark.svg', './logo-color.svg'],
+  output: './public',
+  icons: {
+    pwa: { type: 'png', name: 'icon-{{dims}}', sizes: [192, 512] }
+  }
+});
+```
+
+### Batch Builder
+
+Create batches with a fluent API:
+
+```typescript
+import { createBatch, processBatch, quick } from 'iconz';
+
+const batch = createBatch(
+  quick.pwa('./logo.svg'),
+  quick.ios('./logo.svg'),
+  quick.android('./logo.svg')
+);
+
+const result = await processBatch(batch);
+```
+
+## 🔌 Plugins
+
+### Built-in Plugins
+
+#### Optimization Plugins
+
+Reduce file sizes while maintaining quality:
+
+```typescript
+import { createIconz, aggressiveOptimization, fastOptimization } from 'iconz';
+
+const iconz = createIconz({
+  input: './logo.svg',
+  output: './icons',
+  plugins: [aggressiveOptimization], // ~40% smaller files
+  icons: { /* ... */ }
+});
+```
+
+**Available optimization plugins:**
+- `optimizationPlugin` - Balanced optimization (default: 90% quality)
+- `aggressiveOptimization` - Maximum optimization (~40% reduction, slower)
+- `fastOptimization` - Quick optimization (~20% reduction, fast)
+
+#### Compression Plugins
+
+Format-specific compression strategies:
+
+```typescript
+import { adaptiveCompression, pngCompression, webpCompression } from 'iconz';
+
+const iconz = createIconz({
+  input: './logo.svg',
+  output: './icons',
+  plugins: [adaptiveCompression], // Auto-chooses best compression
+  icons: { /* ... */ }
+});
+```
+
+**Available compression plugins:**
+- `adaptiveCompression` - Auto-selects best settings based on image
+- `pngCompression` - PNG-specific with palette optimization
+- `webpCompression` - Better compression than PNG
+- `avifCompression` - Best compression (newest format)
+- `ultraCompression` - Maximum file size reduction (~50% smaller, lower quality)
+
+#### Effects Plugins
+
+Add visual effects to your icons:
+
+```typescript
+import {
+  createWatermarkPlugin,
+  createShadowPlugin,
+  createBorderPlugin,
+  createEnhancementPlugin
+} from 'iconz';
+
+const iconz = createIconz({
+  input: './logo.svg',
+  output: './icons',
+  plugins: [
+    createEnhancementPlugin({ sharpness: 1, contrast: 5 }),
+    createWatermarkPlugin({ image: './wm.png', opacity: 0.3 }),
+    createBorderPlugin({ width: 2, radius: 10 })
+  ],
+  icons: { /* ... */ }
+});
+```
+
+**Available effects plugins:**
+- `createWatermarkPlugin(config)` - Add watermarks
+- `createShadowPlugin(config)` - Drop shadows
+- `createBorderPlugin(config)` - Borders and rounded corners
+- `createEnhancementPlugin(config)` - Adjust brightness, contrast, saturation, sharpness
+
+#### Plugin Combinations
+
+Combine multiple plugins for optimal results:
+
+```typescript
+import {
+  createEnhancementPlugin,
+  adaptiveCompression,
+  aggressiveOptimization
+} from 'iconz';
+
+const iconz = createIconz({
+  input: './logo.svg',
+  output: './icons',
+  plugins: [
+    createEnhancementPlugin({ sharpness: 1 }), // Enhance first
+    aggressiveOptimization,                     // Then optimize
+    adaptiveCompression                          // Then compress
+  ],
+  icons: { /* ... */ }
+});
+```
+
+**Pro tip:** Apply enhancements before compression for best results.
+
+### Custom Plugins
+
+Create your own plugins:
+
+```typescript
+import type { Plugin } from 'iconz/types/types';
+
+const customPlugin: Plugin = {
+  name: 'custom-plugin',
+  version: '1.0.0',
+
+  setup: async () => {
+    // Initialize resources
+  },
+
+  execute: async ({ image, config, buffer }) => {
+    // Modify the image
+    image.modulate({ brightness: 1.1 });
+    return image;
+  },
+
+  teardown: async () => {
+    // Cleanup resources
+  }
+};
+
+const iconz = createIconz({
+  input: './logo.svg',
+  output: './icons',
+  plugins: [customPlugin],
+  icons: { /* ... */ }
+});
+```
+
+## 📖 API Reference
+
+### `createIconz(config)`
+
+Create a new Iconz instance.
+
+```typescript
+const iconz = createIconz({
+  input: string | Buffer,      // Input image
+  output: string,              // Output directory
+  icons?: IconConfig[],        // Icon configurations
+  options?: ProcessingOptions, // Sharp options
+  plugins?: Plugin[],          // Custom plugins
+  cleanTemp?: boolean          // Clean temp files (default: true)
+});
+```
+
+### `iconz.generate()`
+
+Generate all configured icons.
+
+```typescript
+const report = await iconz.generate();
+
+// Returns:
+{
+  icons: Record<string, GeneratedIcon[]>,
+  failed: Array<{ config: string, error: string }>,
+  temp: string[],
+  stats: {
+    total: number,
+    success: number,
+    failed: number,
+    duration: number
+  }
+}
+```
+
+## 🎨 Supported Formats
+
+### Raster Formats
+- **PNG** - Lossless compression, transparency support
+- **JPEG** - Lossy compression for photos
+- **WebP** - Modern format, better compression than PNG
+- **AVIF** - Newest format, best compression
+
+### Icon Formats
+- **ICO** - Windows icons (multiple sizes in one file)
+- **ICNS** - macOS icons with Retina support
+
+### Vector Format
+- **SVG** - Scalable vector graphics with optimization options
+
+```typescript
+const iconz = createIconz({
+  input: './logo.svg',
+  output: './icons',
+  icons: {
+    svg: {
+      type: 'svg',
+      name: 'icon-{{dims}}',
+      sizes: [24, 48, 64],
+      options: {
+        pretty: true,              // Pretty print with indentation
+        removeXmlDeclaration: false, // Keep XML declaration
+        addDimensions: true,       // Add width/height attributes
+        viewBox: '0 0 100 100'     // Custom viewBox
+      }
+    }
+  }
+});
+```
+
+## 🎨 Template Variables
+
+Use template variables in icon names:
+
+- `{{width}}` - Icon width
+- `{{height}}` - Icon height
+- `{{dims}}` - Dimensions (e.g., "192x192")
+- `{{size}}` - Original size spec
+- `{{counter}}` - Incremental counter
+- `{{date.year}}`, `{{date.month}}`, etc.
+- `{{env.*}}` - Environment variables
+
+Example:
+
+```typescript
+{
+  name: 'icon-{{dims}}-{{date.year}}{{date.month}}{{date.day}}',
+  // Produces: icon-192x192-20241013.png
+}
+```
+
+## 🏗️ Architecture
+
+Iconz 2.0 is built with modern best practices:
+
+- **Modular Design** - Each file <250 lines
+- **TypeScript Generics** - Type-safe configurations
+- **Plugin System** - Extensible architecture
+- **Bun-First** - Optimized for Bun runtime
+- **Zero Dependencies** - Only Sharp for image processing
+
+### Project Structure
+
+```
+src/
+├── types/          # TypeScript types and interfaces
+├── core/           # Core engine, processor, and format registry
+├── generators/     # Format-specific generators (PNG, ICO, ICNS, SVG)
+├── presets/        # Platform presets (iOS, Android, PWA, Electron, Chrome, etc.)
+├── plugins/        # Built-in plugins (optimization, compression, effects)
+├── utils/          # Utilities (paths, templates, batch processing, config loader)
+└── cli/            # Command-line interface
+```
+
+## 🔧 Extensibility
+
+Iconz 2.0 is fully extensible via TypeScript declaration merging:
+
+### Add Custom Formats
+
+```typescript
+// 1. Define your format options
+interface PdfOptions {
+  pageSize: 'A4' | 'letter';
+  dpi?: number;
+}
+
+// 2. Extend the registry
+declare module 'iconz/types' {
+  interface IconFormatRegistry {
+    pdf: PdfOptions;
+  }
+}
+
+// 3. Register runtime handlers
+import {  registerFormatGenerator, registerFormatConverter } from 'iconz';
+
+registerFormatGenerator('pdf', async (buffers, config, options) => {
+  // Your PDF generation logic
+  return generatedIcons;
+});
+
+// 4. Use with full type safety!
+const config: IconConfig<'pdf'> = {
+  type: 'pdf', // ✓ TypeScript knows this is valid
+  name: 'icon',
+  sizes: [512],
+  options: { pageSize: 'A4', dpi: 300 } // ✓ Autocomplete works!
 };
 ```
 
-### Import the defaultSizes and modify as required
-
-```javascript
-const {Iconz, defaultSizes} = require("iconz");
-
-defaultSizes.jpeg = [30, 60, 128, '400x300'];
-```
-
-## Icon Configuration
-
-#### When adding custom icon configurations, use the interface below as a guide
+### Add Custom Presets
 
 ```typescript
+// 1. Define your preset
+const gamingPreset: Preset = {
+  name: 'gaming',
+  description: 'Gaming platform icons',
+  icons: {
+    steam: { type: 'png', name: 'steam-{{dims}}', sizes: [32, 64, 128] },
+    discord: { type: 'png', name: 'discord-{{dims}}', sizes: [48, 96] }
+  }
+};
 
-/**
- * These are the valid icon types for the configuration
- */
-type IconzType = 'png' | 'ico' | 'icns';
-
-/**
- * This is the icon configuration layout
- */
-export interface IconzConfig {
-  /**
-   * This is the type of icon you wish to use
-   * it must be either png, ico or icns
-   *
-   */
-  type: IconzType;
-
-  /**
-   * This is the name of the file you wish to use
-   * it is parsed using the handlebars syntax.
-   *
-   * @example
-   * for an image with the size '24x18' the name
-   * would be as follows:
-   * 'icon-{{size}}' resolves to 'icon-24x18'
-   * 'icon-{{dims}}' resolves to 'icon-24x18'
-   * 'icon-{{width}}' resolves to 'icon-24'
-   * 'icon-{{height}}' resolves to 'icon-18'
-   *
-   * If the size is set as a single number,
-   * e.g 24, the {{dims}} variable returns 24x24,
-   * however, the {{size}} variable would just return 24.
-   *
-   * 'icon-{{size}}' resolves to 'icon-24'
-   * 'icon-{{dims}}' resolves to 'icon-24x24'
-   * 'icon-{{width}}' resolves to 'icon-24'
-   * 'icon-{{height}}' resolves to 'icon-24'
-   */
-  name: string;
-
-  /**
-   * This is an array of sizes, whether as an integer
-   * or a string.
-   *
-   * @example
-   * As a string you can either just use a single number
-   * '56' - which will be both the width and height
-   * @example
-   * If the width differs from the height, use the following format
-   * '120x80' which means the width 120 and height of 80.
-   */
-  sizes: (string | number)[];
-
-  /**
-   * This is the folder you wish to store the images
-   * generated from this configuration.
-   *
-   * If left blank, it will use the default output
-   * from the main configuration.
-   *
-   */
-  folder?: string;
-
-  /**
-   * These resizing options are ones from the sharp library,
-   * and are applied when resizing the icons.
-   *
-   * If left blank, defaults will be chosen
-   *
-   * @see https://sharp.pixelplumbing.com/api-resize
-   * @example
-   * {
-   *   position: 'centre', fit: 'contain', kernel: 'mitchell',
-   *   background: { r: 255, g: 127, b: 0, alpha: 0.5 }
-   * }
-   */
-  options?: IconzResizeOptions;
-
-  /**
-   * The hooks section is optional, but should you wish
-   * to alter any of the icons during generation, the following
-   * hooks can be used.
-   *
-   * If you wish for the system to stop processing the image
-   * after your hook, you must use
-   * resolve(undefined) instead of resolve(image) within the promise
-   *
-   * @function preResize - This runs just before the image is resized and converted to png
-   * @function postResize - This is after the conversion, but before conversion to a buffer and saved to a file
-   */
-  hooks?: IconzHooks;
-
-  /**
-   * should you wish to temporarily disable a single configuration
-   * set the enabled var to false
-   *
-   * @example enabled: false
-   */
-  enabled?: boolean;
-}
-```
-
-## Hooks
-
-### For use with Icon Configuration
-
-```typescript
-/**
- * These are the available hooks
- */
-export interface IconzHooks {
-  preResize?: IconzResizeHook;
-  postResize?: IconzResizeHook;
+// 2. Extend the registry
+declare module 'iconz/types' {
+  interface PresetRegistry {
+    gaming: typeof gamingPreset;
+  }
 }
 
-/**
- *
- * This is for the pre and post resizing hook methods
- *
- * PLEASE NOTE!!! resolve(image) MUST be called within your promise
- * for the system to continue processing it.
- *
- * @example
- *
- * const myHook = (self,image,options,targetFilename,imageReport) => {
- *   image.modulate({ brightness: 2 });
- *   Promise.resolve(image);
- * }
- *
- * HOWEVER!!! resolve(undefined) will ensure the system
- * does NOT process the image further.
- *
- * @example
- *
- * const myHook = (self,image,options,targetFilename,imageReport) => {
- *  image.blur(4).jpeg().toBuffer()
- *    .then((data) => fs.writeFileSync('myFile.jpg', data));
- *  Promise.resolve(undefined);
- * }
- *
- */
+// 3. Register it
+import { registerPreset } from 'iconz';
+registerPreset('gaming', gamingPreset);
 
-type IconzResizeHook = (
-  /**
-   * This is the instantiated Iconz class you created
-   */
-  self: Iconz,
-  /** This is the image generated and processed just before hook is called */
-  image: IconzImage,
-  /**
-   * These are the resizing options from within your icon configuration
-   * it also includes the width (options.width) and height (options.height)
-   * of the image that is being generated.
-   */
-  options: IconzResizeOptions,
-  /**
-   * This is the target filename of the intended icon to be generated.
-   */
-  targetFilename: string,
-  /**
-   * This returns a report object containing a list of all the icons generated
-   * You may add to the object, and it will be returned at the end.
-   */
-  imageReport: IconzReport,
-) => Promise<IconzImage | undefined>;
+// 4. Use with autocomplete!
+createConfig('./logo.svg').use('gaming').build(); // ✓ TypeScript knows 'gaming' exists
 ```
 
-## Output Filename parsing
+## 🧪 Testing
 
-### use handlebar variables on your output filenames.
+```bash
+# Run tests
+bun test
 
-#### Below are some available to use and examples of their values
+# Watch mode
+bun test --watch
 
-Global Counter
-
-```text
-{{counter}} - result is an incremental counter (global)
+# Coverage
+bun test --coverage
 ```
 
-Image Dimensions
+## 🤝 Contributing
 
-```text
-{{dims}} - returns dimensions such as 180x50 or 1024x768 or 50x50
-{{size}} - this is whatever you placed in your sizes array, such as 48 or 96 or 150x30
-{{width}} - the width of the icon
-{{height}} - the height of the icon
-```
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) first.
 
-Configuration of the current image being created
+## 📄 License
 
-```text
-{{config.type}} - Type of icon being generated (png, ico, icns or jpeg)
-{{config.name}} - The unparsed name of the file e.g. icon-{{size}}
-{{config.sizes.0}} - First image in sizes
-{{config.output}} - Folder specified as output folder
-```
+MIT © [SuavePlan](https://github.com/SuavePlan)
 
-(See: [Sharp Image Processor Resize Options](https://sharp.pixelplumbing.com/api-resize#metadata))
+## 🔗 Links
 
-```text
-{{config.options.fit}} - Resize fit type
-{{config.options.position}} - Resize position type
-{{config.options.kernel}} - Resize kernel
-...
-For more, see link above.
-```
+- [Documentation](https://github.com/SuavePlan/iconz#readme)
+- [Changelog](CHANGELOG.md)
+- [Issues](https://github.com/SuavePlan/iconz/issues)
 
-Date per image creation
+## 🙏 Credits
 
-```text
-{{date.epoch}} - Seconds since epoch
-{{date.date}} - YYYYMMDD format
-{{date.datemtime}} - YYYYMMDDHHmmSSMIL format
-{{date.datetime}} - YYYYMMDDHHmmSS format
-{{date.mtime}} - HHmmSSMIL (MIL = Milliseconds) format
-{{date.time}} - HHmmSS format
-{{date.offset}} - Timezone Offset
-{{date.year}} - Year (4 digit)
-{{date.month}} - Month (2 digit)
-{{date.day}} - Day of the month (2 digit)
-{{date.dow}} - (Day of the week 0 - 6)
-{{date.hour}} - Hour (2 digit)
-{{date.minute}} - Minute (2 digit)
-{{date.second}} - Seconds (2 digit)
-{{date.millisecond}} - Milliseconds (3 digit 000-999)
-```
+Built with:
+- [Sharp](https://sharp.pixelplumbing.com/) - High-performance image processing
+- [Bun](https://bun.sh/) - Fast JavaScript runtime
+- [Biome](https://biomejs.dev/) - Fast formatter and linter
 
-Start date before all images created
+---
 
-```text
-{{start.epoch}} - Seconds since epoch
-{{start.date}} - YYYYMMDD format
-{{start.datemtime}} - YYYYMMDDHHmmSSMIL format
-{{start.datetime}} - YYYYMMDDHHmmSS format
-{{start.mtime}} - HHmmSSMIL (MIL = Milliseconds) format
-{{start.time}} - HHmmSS format
-{{start.offset}} - Timezone Offset
-{{start.year}} - Year (4 digit)
-{{start.month}} - Month (2 digit)
-{{start.day}} - Day of the month (2 digit)
-{{start.dow}} - (Day of the week 0 - 6)
-{{start.hour}} - Hour (2 digit)
-{{start.minute}} - Minute (2 digit)
-{{start.second}} - Seconds (2 digit)
-{{start.millisecond}} - Milliseconds (3 digit 000-999)
-```
-
-Environment variables from process.env
-(See: [NodeJS process.env](https://nodejs.org/dist/latest-v16.x/docs/api/process.html#process_process_env))
-
-```text
-{{env.USER}} - Current user
-{{env.PATH}} - Environment Path
-...
-For more, see link above.
-```
-
-Meta Information from original image
-(See: [Sharp Image Processor Metadata](https://sharp.pixelplumbing.com/api-input#metadata))
-
-```text
-{{meta.format}} - Name of decoder used to decompress image data e.g. jpeg, png, webp, gif, svg
-{{meta.pages}} - Number of pages/frames contained within the image, with support for TIFF, HEIF, PDF, animated GIF and animated WebP
-...
-For more, see link above.
-```
-
-Stats Information from original image
-(See: [Sharp Image Processor Stats](https://sharp.pixelplumbing.com/api-input#stats))
-
-```text
-{{stats.isOpaque}} - Is the image fully opaque? Will be true if the image has no alpha channel or if every pixel is fully opaque.
-{{stats.channels.sum}} - Sum of all values in a channel
-...
-For more, see link above.
-```
-
-### Filename examples
-
-```text
-my-icon-{{dims}} -> my-icon-48x54.png
-```
-
-```text
-icon-{{counter}} -> icon-0.png
-```
-
-```text
-favicon-{{env.USER}}-{{date.date}}_{{date.time}} -> favicon-admin-20210718_233500.png
-```
-
-```text
-favicon-{{env.USER}}-{{date.date}}_{{date.time}} -> favicon-admin-20210718_233500.png
-```
-
-```text
-icon-{{config.options.fit}}-{{counter}} -> icon-cover-0.png
-```
-
-## Output path generation
-
-> ### If relative paths are used:
-> The folder chain is as follows for the output folder name:
->```text
-> cwd (current working directory) / input folder / output folder
->```
-> The temp folder is created in the OS temp folder unless specified otherwise.
-> If specified, the folder chain is as follows for the temp folder name (a child of the output folder):
->```text
-> cwd (current working directory) / input folder / output folder / temp
->```
-> The folder specified within the icon configuration is relative to the output folder also.
-
-> #### When specifying 'input', 'output' and 'temp' folders, please note that depending on whether they are absolute or relative can change the destination paths.
-
-> [X] indicates an ___absolute___ path is used in the configuration <br />
-> [ . ] indicates a ___relative___ path is used in the configuration
-
-**source**|**source**|**source**|**resulting**|**destination**|**destination**
-:-----:|:-----:|:-----:|:-----:|:-----:|:-----:
-input|output|temp|path|output|temp
-[X]|[X]|[X]|->|output|temp
-[X]|[X]|[ . ]|->|output|output / temp
-[X]|[ . ]|[X]|->|input / output|temp
-[X]|[ . ]|[ . ]|->|input / output|input / output / temp
-[ . ]|[X]|[X]|->|output|temp
-[ . ]|[X]|[ . ]|->|output|output / temp
-[ . ]|[ . ]|[X]|->|cwd / input / output|temp
-[ . ]|[ . ]|[ . ]|->|cwd / input / output|cwd / input / output / temp
-
+Made with ❤️ by [SuavePlan](https://github.com/SuavePlan)

@@ -1,32 +1,32 @@
 {
   "compilerOptions": {
-    "lib": [
-      "es5",
-      "es6",
-      "dom",
-      "dom.iterable"
-    ],
-    "outDir": "dist/",
-    "sourceMap": true,
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "noEmitOnError": true,
-    "target": "es6",
-    "declaration": true,
-    "removeComments": false,
-    "noImplicitAny": true,
-    "forceConsistentCasingInFileNames": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2023"],
+    "moduleResolution": "bundler",
+    "types": ["bun-types"],
+
+    "outDir": "./dist",
+    "rootDir": "./src",
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
-    "pretty": true,
-    "esModuleInterop": true
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    "allowSyntheticDefaultImports": true
   },
-  "include": [
-    "src/*.ts",
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "bin",
-    "*.spec.ts"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "old", "**/*.test.ts"]
 }
